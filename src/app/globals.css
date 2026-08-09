@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f4f5f7;
+  --text: #111111;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #ff5c00;
+  --accent-hover: #e04e00;
+  --accent-foreground: #ffffff;
+  --live: #e11d2e;
+  --live-foreground: #ffffff;
+  --destructive: #dc2626;
+  --kicker-orange: #ff5c00;
+  --kicker-red: #e11d2e;
+  --kicker-green: #16a34a;
+  --shadow-color: 0 0 0;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --bg: #0f1115;
+  --surface: #171a20;
+  --surface-muted: #1f232b;
+  --text: #f3f4f6;
+  --text-muted: #9aa0aa;
+  --border: #2a2e37;
+  --accent: #ff7a33;
+  --accent-hover: #ff8f52;
+  --accent-foreground: #14161c;
+  --live: #ff6b7a;
+  --live-foreground: #14161c;
+  --destructive: #f87171;
+  --kicker-orange: #ff8a4d;
+  --kicker-red: #ff6b7a;
+  --kicker-green: #4ade80;
+  --shadow-color: 0 0 0;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-live: var(--live);
+  --color-live-foreground: var(--live-foreground);
+  --color-kicker-orange: var(--kicker-orange);
+  --color-kicker-red: var(--kicker-red);
+  --color-kicker-green: var(--kicker-green);
+
+  --font-display: var(--font-hind), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-hind), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* shadcn/ui component aliases — mapped onto this project's own brand
+     tokens above, so shadcn-pattern primitives (button, card, dialog...)
+     inherit the same dense, functional palette as everything else. */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-secondary: var(--surface-muted);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--surface-muted);
+  --color-muted-foreground: var(--text-muted);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: #ffffff;
+  --color-input: var(--border);
+  --color-ring: var(--accent);
+
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+}
+
+* {
+  border-color: var(--border);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 32s linear infinite;
+}
+
+.animate-marquee:hover,
+.animate-marquee:focus-within {
+  animation-play-state: paused;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.animate-live-pulse {
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
