@@ -6,7 +6,7 @@ import { Home, HelpCircle, MessageSquare, MonitorPlay, Search, Video, X } from "
 import { CategoryLinks } from "@/components/layout/category-sidebar";
 import { useLanguage } from "@/components/i18n/language-provider";
 import type { TranslationKey } from "@/lib/i18n/dictionary";
-import { utilityLinks, secondaryLinks } from "@/config/nav.config";
+import { secondaryLinks } from "@/config/nav.config";
 
 const linkMeta: Record<string, { icon: typeof Home; labelKey: TranslationKey; motion: string }> = {
   home: { icon: Home, labelKey: "nav.home", motion: "animate-icon-bob" },
@@ -57,7 +57,7 @@ export function MobileSidebarDrawer({ open, onClose }: { open: boolean; onClose:
               <CategoryLinks />
 
               <nav className="flex flex-col border-t border-border pt-2">
-                {[...utilityLinks, ...secondaryLinks].map((link) => {
+                {secondaryLinks.map((link) => {
                   const meta = linkMeta[link.key] ?? linkMeta.home;
                   const Icon = meta.icon;
                   return (

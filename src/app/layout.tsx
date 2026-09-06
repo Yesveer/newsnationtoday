@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Hind, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { LanguageProvider } from "@/components/i18n/language-provider";
@@ -10,6 +10,7 @@ import { CategorySidebar } from "@/components/layout/category-sidebar";
 import { AdSlot } from "@/components/layout/sidebar-widgets/ad-slot";
 import { TrendingWidget } from "@/components/layout/sidebar-widgets/trending-widget";
 import { VideoWidget } from "@/components/layout/sidebar-widgets/video-widget";
+import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { Footer } from "@/components/layout/footer";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
@@ -39,12 +40,18 @@ export const metadata: Metadata = {
   },
 };
 
+// `viewportFit: cover` is what makes env(safe-area-inset-bottom) non-zero on
+// notched iPhones, so the tab bar clears the home indicator.
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const heroArticles = await getHeroArticles();
 
   return (
     <html lang="hi" suppressHydrationWarning className={`${hind.variable} ${inter.variable}`}>
-      <body className="flex min-h-screen flex-col antialiased">
+      <body className="flex min-h-screen flex-col pb-[calc(5.5rem+env(safe-area-inset-bottom))] antialiased lg:pb-0">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <LanguageProvider>
             <Masthead />
@@ -63,6 +70,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </aside>
             </div>
             <Footer />
+            <MobileTabBar />
           </LanguageProvider>
         </ThemeProvider>
       </body>
