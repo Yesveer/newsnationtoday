@@ -3,6 +3,7 @@ import { PromoBanner } from "@/components/home/promo-banner";
 import type { ArticleWithRelations } from "@/types/article";
 
 const PROMO_EVERY = 6;
+const LEAD_EVERY = 8;
 
 export function NewsFeed({ articles }: { articles: ArticleWithRelations[] }) {
   return (
@@ -14,7 +15,7 @@ export function NewsFeed({ articles }: { articles: ArticleWithRelations[] }) {
               <PromoBanner />
             </div>
           )}
-          <FeedItem article={article} />
+          <FeedItem article={article} variant={index % LEAD_EVERY === 0 ? "lead" : "compact"} />
         </div>
       ))}
     </div>

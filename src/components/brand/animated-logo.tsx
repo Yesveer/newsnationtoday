@@ -1,12 +1,26 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/cn";
 
 const SESSION_KEY = "newshub-logo-drawn";
+// Intrinsic size of public/logo-red.png (tight-cropped from the client's supplied artwork).
+const LOGO_ASPECT = 1724 / 319;
+
+const maskStyle = {
+  maskImage: "url(/logo-red.png)",
+  WebkitMaskImage: "url(/logo-red.png)",
+  maskSize: "contain",
+  WebkitMaskSize: "contain",
+  maskRepeat: "no-repeat",
+  WebkitMaskRepeat: "no-repeat",
+  maskPosition: "center",
+  WebkitMaskPosition: "center",
+} as const;
 
 function getShouldAnimate(): boolean {
   if (typeof window === "undefined") return false;
@@ -18,57 +32,38 @@ const emptySubscribe = () => () => {};
 const getServerSnapshot = () => false;
 
 /**
- * Icon mark draws itself in via SVG pathLength once per browser session
- * (sessionStorage-gated, like StoneOks' site-loader), then renders fully
- * drawn on every subsequent mount — including route changes — so it never
- * replays mid-session. Shared with the future admin topbar (Phase 2).
+ * Renders the client's supplied logo mark with:
+ * - a one-time entrance animation per browser session (sessionStorage-gated,
+ *   like StoneOks' site-loader) that never replays mid-session, and
+ * - a continuously-looping "live" shine sweep clipped to the logo's own
+ *   alpha shape via a CSS mask, so the brand mark never sits fully static.
+ * Both respect `prefers-reduced-motion` (the entrance via `shouldAnimate`,
+ * the loop via the global reduced-motion override in globals.css).
+ * Shared with the future admin topbar (Phase 2).
  */
-export function AnimatedLogo({ size = 34, className }: { size?: number; className?: string }) {
+export function AnimatedLogo({ size = 18, className }: { size?: number; className?: string }) {
   const shouldAnimate = useSyncExternalStore(emptySubscribe, getShouldAnimate, getServerSnapshot);
 
   useEffect(() => {
     if (shouldAnimate) sessionStorage.setItem(SESSION_KEY, "1");
   }, [shouldAnimate]);
 
+  const width = Math.round(size * LOGO_ASPECT);
+
   return (
-    <Link href="/" className={cn("flex shrink-0 items-center gap-2.5", className)} aria-label={siteConfig.name}>
-      <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden>
-        <motion.rect
-          x="5.5"
-          y="9.5"
-          width="25"
-          height="21"
-          rx="3"
-          stroke="var(--accent)"
-          strokeWidth="2.5"
-          initial={shouldAnimate ? { pathLength: 0, opacity: 0 } : false}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 0.9, ease: "easeInOut" }}
-        />
-        <motion.path
-          d="M11.5 17h13M11.5 22.5h9"
-          stroke="var(--live)"
-          strokeWidth="2"
-          strokeLinecap="round"
-          initial={shouldAnimate ? { pathLength: 0 } : false}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.6, delay: 0.55, ease: "easeOut" }}
-        />
-      </svg>
-      <span className="flex flex-col justify-center leading-none">
-        <span className="font-display text-xl leading-none font-bold tracking-tight text-text">
-          {siteConfig.name}
-        </span>
-        <svg width="100%" height="3" viewBox="0 0 100 3" preserveAspectRatio="none" className="mt-1 w-full" aria-hidden>
-          <motion.path
-            d="M0 1.5 H100"
-            stroke="var(--accent)"
-            strokeWidth="2"
-            initial={shouldAnimate ? { pathLength: 0 } : false}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.7, delay: 0.3, ease: "easeInOut" }}
-          />
-        </svg>
+    <Link href="/" className={cn("flex shrink-0 items-center gap-2", className)} aria-label={siteConfig.name}>
+      <motion.span
+        className="relative block"
+        style={{ width, height: size }}
+        initial={shouldAnimate ? { opacity: 0, scale: 0.85, y: 6 } : false}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        <Image src="/logo-red.png" alt={siteConfig.name} width={width} height={size} priority className="object-contain" />
+        <span aria-hidden className="animate-logo-shine pointer-events-none absolute inset-0" style={maskStyle} />
+      </motion.span>
+      <span className="hidden text-base leading-none font-bold tracking-tight whitespace-nowrap text-text sm:inline">
+        {siteConfig.name}
       </span>
     </Link>
   );

@@ -1,5 +1,5 @@
 export const siteConfig = {
-  name: "NewsNationToday",
+  name: "News Nation Today",
   tagline: "हर खबर, पूरी सच्चाई के साथ",
   taglineEn: "Every story, told straight",
   description:

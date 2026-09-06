@@ -72,3 +72,19 @@ export async function getRelatedArticles(
 export async function getAllArticles(): Promise<ArticleWithRelations[]> {
   return publishedSortedByDate().map(resolve);
 }
+
+/** Lead stories for the homepage hero — featured first, then the most recent. */
+export async function getHeroArticles(count = 8): Promise<ArticleWithRelations[]> {
+  const published = publishedSortedByDate();
+  const featured = published.filter((article) => article.isFeatured);
+  const rest = published.filter((article) => !article.isFeatured);
+
+  return [...featured, ...rest].slice(0, count).map(resolve);
+}
+
+/** Video-flagged articles, for the /videos hub. */
+export async function getVideoArticles(): Promise<ArticleWithRelations[]> {
+  return publishedSortedByDate()
+    .filter((article) => article.isVideo)
+    .map(resolve);
+}

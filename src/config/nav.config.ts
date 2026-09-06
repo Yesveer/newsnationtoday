@@ -1,10 +1,19 @@
-import { categoriesConfig } from "@/config/categories.config";
+export interface UtilityLink {
+  key: string;
+  label: string;
+  href: string;
+}
 
-export const navLinks = [
-  { label: "होम", href: "/" },
-  ...categoriesConfig
-    .slice()
-    .sort((a, b) => a.order - b.order)
-    .map((category) => ({ label: category.name, href: `/${category.slug}` })),
-  { label: "हमारे बारे में", href: "/about" },
+/** Primary utility row in the masthead (icon + label), mapped to icons locally by `key`. */
+export const utilityLinks: UtilityLink[] = [
+  { key: "home", label: "होम", href: "/" },
+  { key: "search", label: "सर्च", href: "/search" },
+  { key: "videos", label: "वीडियो", href: "/videos" },
+  { key: "watch", label: "वॉच", href: "/watch" },
+];
+
+/** Secondary links — shown inline on wide screens, folded into the mobile drawer otherwise. */
+export const secondaryLinks: UtilityLink[] = [
+  { key: "faq", label: "FAQ", href: "/faq" },
+  { key: "feedback", label: "Feedback", href: "/contact" },
 ];

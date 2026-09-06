@@ -1,10 +1,25 @@
 "use client";
 
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { X } from "lucide-react";
+import { Home, HelpCircle, MessageSquare, MonitorPlay, Search, Video, X } from "lucide-react";
 import { CategoryLinks } from "@/components/layout/category-sidebar";
+import { useLanguage } from "@/components/i18n/language-provider";
+import type { TranslationKey } from "@/lib/i18n/dictionary";
+import { utilityLinks, secondaryLinks } from "@/config/nav.config";
+
+const linkMeta: Record<string, { icon: typeof Home; labelKey: TranslationKey; motion: string }> = {
+  home: { icon: Home, labelKey: "nav.home", motion: "animate-icon-bob" },
+  search: { icon: Search, labelKey: "nav.search", motion: "animate-icon-wiggle" },
+  videos: { icon: Video, labelKey: "nav.videos", motion: "animate-icon-pulse" },
+  watch: { icon: MonitorPlay, labelKey: "nav.watch", motion: "animate-icon-flicker" },
+  faq: { icon: HelpCircle, labelKey: "menu.faq", motion: "" },
+  feedback: { icon: MessageSquare, labelKey: "menu.feedback", motion: "" },
+};
 
 export function MobileSidebarDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useLanguage();
+
   return (
     <AnimatePresence>
       {open && (
@@ -32,7 +47,7 @@ export function MobileSidebarDrawer({ open, onClose }: { open: boolean; onClose:
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="मेनू बंद करें"
+                aria-label={t("drawer.close")}
                 className="flex size-9 items-center justify-center rounded-full text-text hover:text-accent"
               >
                 <X className="size-5" />
@@ -40,6 +55,23 @@ export function MobileSidebarDrawer({ open, onClose }: { open: boolean; onClose:
             </div>
             <div onClick={onClose}>
               <CategoryLinks />
+
+              <nav className="flex flex-col border-t border-border pt-2">
+                {[...utilityLinks, ...secondaryLinks].map((link) => {
+                  const meta = linkMeta[link.key] ?? linkMeta.home;
+                  const Icon = meta.icon;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text transition-colors hover:bg-surface-muted"
+                    >
+                      <Icon className={`size-4 shrink-0 ${meta.motion}`} />
+                      {t(meta.labelKey)}
+                    </Link>
+                  );
+                })}
+              </nav>
             </div>
           </motion.div>
         </>

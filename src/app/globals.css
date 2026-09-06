@@ -128,6 +128,120 @@ h6 {
   animation-play-state: paused;
 }
 
+/* Continuous "live" shine sweep for the brand logo — a gradient band that
+   loops across the logo artwork, clipped to its own alpha shape via mask. */
+@keyframes logo-shine {
+  0% {
+    background-position: -120% 0;
+  }
+  100% {
+    background-position: 220% 0;
+  }
+}
+
+.animate-logo-shine {
+  background-image: linear-gradient(
+    110deg,
+    transparent 40%,
+    rgb(255 255 255 / 85%) 50%,
+    transparent 60%
+  );
+  background-size: 250% 100%;
+  animation: logo-shine 2.8s linear infinite;
+}
+
+/* Continuously-moving nav icons — each nav item gets its own motion so the
+   bar never reads as a static row of glyphs. */
+@keyframes icon-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes icon-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-14deg);
+  }
+  75% {
+    transform: rotate(14deg);
+  }
+}
+
+@keyframes icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+@keyframes icon-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.4;
+  }
+  55% {
+    opacity: 0.4;
+  }
+}
+
+.animate-icon-bob {
+  animation: icon-bob 2.2s ease-in-out infinite;
+}
+
+.animate-icon-wiggle {
+  animation: icon-wiggle 2.6s ease-in-out infinite;
+}
+
+.animate-icon-pulse {
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+.animate-icon-flicker {
+  animation: icon-flicker 2.4s ease-in-out infinite;
+}
+
+@keyframes icon-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.08);
+  }
+}
+
+.animate-icon-float {
+  animation: icon-float 3.4s ease-in-out infinite;
+}
+
+/* Slow push-in on the hero slide image, restarted per slide. */
+@keyframes kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+.animate-kenburns {
+  animation: kenburns 7s ease-out forwards;
+}
+
 @keyframes live-pulse {
   0%,
   100% {
