@@ -29,7 +29,7 @@ export function MobileTabBar() {
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:hidden">
       <nav
         aria-label={t("nav.home")}
-        className="pointer-events-auto relative w-full max-w-md overflow-hidden rounded-full border border-black/10 bg-surface/45 shadow-[0_14px_45px_-10px_rgb(0_0_0/0.5)] backdrop-blur-2xl backdrop-saturate-200 dark:border-white/15 dark:bg-surface/30"
+        className="pointer-events-auto relative max-w-full overflow-hidden rounded-full border border-black/10 bg-surface/45 shadow-[0_14px_45px_-10px_rgb(0_0_0/0.5)] backdrop-blur-2xl backdrop-saturate-200 dark:border-white/15 dark:bg-surface/30"
       >
         {/* specular sheen along the top edge — the glass cue */}
         <span
@@ -37,7 +37,10 @@ export function MobileTabBar() {
           className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/60 to-transparent dark:from-white/15"
         />
 
-        <ul className="relative grid grid-cols-4 gap-1 p-2">
+        {/* Fixed cell widths (not a % of the screen) keep the dock reading as a
+            dock on every device — a 320px phone and an 834px tablet get the
+            same proportions instead of a stretched bar or a tiny pill. */}
+        <ul className="relative flex items-center gap-1 p-2">
           {utilityLinks.map((link) => {
             const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             const meta = tabMeta[link.key] ?? tabMeta.home;
@@ -57,7 +60,7 @@ export function MobileTabBar() {
                   aria-label={t(meta.labelKey)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex h-12 w-full items-center justify-center rounded-full transition-transform active:scale-90",
+                    "relative flex h-12 w-16 items-center justify-center rounded-full transition-transform active:scale-90 sm:w-[4.5rem]",
                     active ? "text-accent" : "text-text-muted",
                   )}
                 >

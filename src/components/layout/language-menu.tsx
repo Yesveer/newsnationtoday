@@ -16,7 +16,8 @@ export function LanguageMenu() {
       trigger={
         <>
           <Globe className="size-4" />
-          <span className="text-sm font-medium">{current?.label}</span>
+          {/* Label drops on very narrow phones so the header cluster can't overflow. */}
+          <span className="text-sm font-medium max-[380px]:hidden">{current?.label}</span>
           <ChevronDown className="size-3.5" />
         </>
       }
