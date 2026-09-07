@@ -41,7 +41,7 @@ const getServerSnapshot = () => false;
  * the loop via the global reduced-motion override in globals.css).
  * Shared with the future admin topbar (Phase 2).
  */
-export function AnimatedLogo({ size = 18, className }: { size?: number; className?: string }) {
+export function AnimatedLogo({ size = 21, className }: { size?: number; className?: string }) {
   const shouldAnimate = useSyncExternalStore(emptySubscribe, getShouldAnimate, getServerSnapshot);
 
   useEffect(() => {
@@ -51,7 +51,11 @@ export function AnimatedLogo({ size = 18, className }: { size?: number; classNam
   const width = Math.round(size * LOGO_ASPECT);
 
   return (
-    <Link href="/" className={cn("flex shrink-0 items-center gap-2", className)} aria-label={siteConfig.name}>
+    <Link
+      href="/"
+      className={cn("flex shrink-0 flex-col items-center gap-0.5 leading-none", className)}
+      aria-label={siteConfig.name}
+    >
       <motion.span
         className="relative block"
         style={{ width, height: size }}
@@ -62,7 +66,7 @@ export function AnimatedLogo({ size = 18, className }: { size?: number; classNam
         <Image src="/logo-red.png" alt={siteConfig.name} width={width} height={size} priority className="object-contain" />
         <span aria-hidden className="animate-logo-shine pointer-events-none absolute inset-0" style={maskStyle} />
       </motion.span>
-      <span className="hidden text-base leading-none font-bold tracking-tight whitespace-nowrap text-text sm:inline">
+      <span className="text-[9px] leading-none font-bold tracking-[0.08em] whitespace-nowrap text-text uppercase sm:text-[11px] sm:tracking-[0.12em]">
         {siteConfig.name}
       </span>
     </Link>
