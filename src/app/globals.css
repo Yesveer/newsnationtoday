@@ -128,6 +128,26 @@ h6 {
   animation-play-state: paused;
 }
 
+/* Continuously scrolling trending list — content is duplicated once, so
+   translating by -50% loops seamlessly. */
+@keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical 22s linear infinite;
+}
+
+.animate-marquee-vertical:hover,
+.animate-marquee-vertical:focus-within {
+  animation-play-state: paused;
+}
+
 /* Continuous "live" shine sweep for the brand logo — a gradient band that
    loops across the logo artwork, clipped to its own alpha shape via mask. */
 @keyframes logo-shine {

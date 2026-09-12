@@ -30,7 +30,7 @@ export function ArticleHeader({ article }: { article: ArticleWithRelations }) {
         </Link>
       </nav>
 
-      <h1 className="text-2xl leading-tight font-bold text-text sm:text-3xl">
+      <h1 className="text-[26px] leading-tight font-bold text-text sm:text-4xl">
         {kicker && <span className={cn("mr-2", kicker.colorClass)}>{kicker.text}:</span>}
         {article.title}
       </h1>

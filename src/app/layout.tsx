@@ -7,9 +7,9 @@ import { HeroSection } from "@/components/home/hero-section";
 import { TrendingChips } from "@/components/home/trending-chips";
 import { getHeroArticles } from "@/lib/data/get-articles";
 import { CategorySidebar } from "@/components/layout/category-sidebar";
-import { AdSlot } from "@/components/layout/sidebar-widgets/ad-slot";
 import { TrendingWidget } from "@/components/layout/sidebar-widgets/trending-widget";
 import { VideoWidget } from "@/components/layout/sidebar-widgets/video-widget";
+import { RailFooter } from "@/components/layout/sidebar-widgets/rail-footer";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { Footer } from "@/components/layout/footer";
 import { siteConfig } from "@/config/site";
@@ -62,14 +62,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <TrendingChips />
                 {children}
               </main>
-              <aside className="hidden flex-col gap-6 xl:flex">
-                <AdSlot />
-                <TrendingWidget />
-                <VideoWidget />
-                <AdSlot />
+              <aside className="hidden xl:block">
+                <div className="sticky top-16 flex flex-col gap-5">
+                  <TrendingWidget />
+                  <VideoWidget />
+                  <RailFooter />
+                </div>
               </aside>
             </div>
-            <Footer />
+            <Footer className="xl:hidden" />
             <MobileTabBar />
           </LanguageProvider>
         </ThemeProvider>

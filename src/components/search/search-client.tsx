@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { FeedItem } from "@/components/article/feed-item";
+import { StoryRow } from "@/components/article/story-row";
 import type { ArticleWithRelations } from "@/types/article";
 
 export function SearchClient({ articles }: { articles: ArticleWithRelations[] }) {
@@ -43,9 +43,9 @@ export function SearchClient({ articles }: { articles: ArticleWithRelations[] })
         <div className="flex flex-col gap-6">
           <p className="text-sm text-text-muted">{results.length} परिणाम मिले</p>
           {results.length > 0 ? (
-            <div className="flex flex-col">
+            <div className="flex flex-col divide-y divide-border">
               {results.map((article) => (
-                <FeedItem key={article.id} article={article} />
+                <StoryRow key={article.id} article={article} className="py-1.5 first:pt-0 last:pb-0" />
               ))}
             </div>
           ) : (

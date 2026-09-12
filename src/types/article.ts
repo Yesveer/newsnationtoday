@@ -29,6 +29,8 @@ export interface Article {
   isBreaking: boolean;
   isVideo?: boolean;
   videoDurationLabel?: string;
+  /** Sub-topic within a category — a state, country or sport slug (see topics.config). */
+  topic?: string;
   location?: { state?: string; city?: string };
   publishedAt: string;
   createdAt: string;
