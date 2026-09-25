@@ -8,12 +8,12 @@ import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/cn";
 
 const SESSION_KEY = "newshub-logo-drawn";
-// Intrinsic size of public/logo-red.png (tight-cropped from the client's supplied artwork).
-const LOGO_ASPECT = 1724 / 319;
+// Intrinsic size of public/logo-nnt.png (tight-cropped from the client's supplied artwork).
+const LOGO_ASPECT = 900 / 301;
 
 const maskStyle = {
-  maskImage: "url(/logo-red.png)",
-  WebkitMaskImage: "url(/logo-red.png)",
+  maskImage: "url(/logo-nnt.png)",
+  WebkitMaskImage: "url(/logo-nnt.png)",
   maskSize: "contain",
   WebkitMaskSize: "contain",
   maskRepeat: "no-repeat",
@@ -41,7 +41,7 @@ const getServerSnapshot = () => false;
  * the loop via the global reduced-motion override in globals.css).
  * Shared with the future admin topbar (Phase 2).
  */
-export function AnimatedLogo({ size = 21, className }: { size?: number; className?: string }) {
+export function AnimatedLogo({ size = 34, className }: { size?: number; className?: string }) {
   const shouldAnimate = useSyncExternalStore(emptySubscribe, getShouldAnimate, getServerSnapshot);
 
   useEffect(() => {
@@ -63,8 +63,8 @@ export function AnimatedLogo({ size = 21, className }: { size?: number; classNam
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <Image src="/logo-red.png" alt={siteConfig.name} width={width} height={size} priority className="object-contain" />
-        <span aria-hidden className="animate-logo-shine pointer-events-none absolute inset-0" style={maskStyle} />
+        <Image src="/logo-nnt.png" alt={siteConfig.name} width={width} height={size} priority className="object-contain" />
+        <span aria-hidden className="animate-logo-shine pointer-events-none absolute inset-0 opacity-50" style={maskStyle} />
       </motion.span>
       <span className="text-[9px] leading-none font-bold tracking-[0.08em] whitespace-nowrap text-text uppercase sm:text-[11px] sm:tracking-[0.12em]">
         {siteConfig.name}
