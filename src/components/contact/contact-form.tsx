@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
+import { PillButton } from "@/components/ui/pill-button";
 
 const contactSchema = z.object({
   name: z.string().min(2, "कृपया अपना पूरा नाम दर्ज करें"),
@@ -90,9 +90,9 @@ export function ContactForm() {
         {errors.message && <p className="text-xs text-destructive">{errors.message.message}</p>}
       </div>
 
-      <Button type="submit" disabled={isSubmitting} className="self-start">
+      <PillButton type="submit" disabled={isSubmitting} className="self-start">
         संदेश भेजें
-      </Button>
+      </PillButton>
     </form>
   );
 }

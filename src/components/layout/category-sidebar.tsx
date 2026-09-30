@@ -30,6 +30,8 @@ import type { ComponentType } from "react";
 import { categoriesConfig } from "@/config/categories.config";
 import { siteConfig } from "@/config/site";
 import { useLanguage } from "@/components/i18n/language-provider";
+import { useSiteSettings } from "@/components/site/site-settings-provider";
+import type { Category } from "@/types/category";
 import { cn } from "@/lib/cn";
 
 type IconComponent = ComponentType<{ className?: string; stroke?: number }>;
@@ -74,10 +76,22 @@ function IconTile({ color, children }: { color: string; children: React.ReactNod
   );
 }
 
-export function CategoryLinks({ className }: { className?: string }) {
+/** The list comes from the database, so adding, renaming, recolouring or
+ *  reordering a category in the admin portal changes this navigation. The
+ *  static config is only a fallback for when the API is unreachable. */
+export function CategoryLinks({
+  className,
+  categories,
+}: {
+  className?: string;
+  categories?: Category[];
+}) {
   const pathname = usePathname();
   const { language, t } = useLanguage();
+  const { sidebar } = useSiteSettings();
   const activeSlug = pathname.split("/")[1];
+
+  const items = (categories?.length ? categories : categoriesConfig).slice().sort((a, b) => a.order - b.order);
 
   return (
     <nav className={cn("flex flex-col gap-0.5", className)}>
@@ -94,12 +108,10 @@ export function CategoryLinks({ className }: { className?: string }) {
         <span className="truncate">{t("sidebar.topNews")}</span>
       </Link>
 
-      {categoriesConfig
-        .slice()
-        .sort((a, b) => a.order - b.order)
-        .map((category) => {
+      {items.map((category) => {
           const Icon = categoryIcons[category.slug] ?? IconFlame;
           const active = category.slug === activeSlug;
+          const isNew = "isNew" in category ? Boolean(category.isNew) : false;
           return (
             <Link
               key={category.slug}
@@ -109,30 +121,39 @@ export function CategoryLinks({ className }: { className?: string }) {
                 active ? "bg-surface-muted text-text" : "text-text hover:bg-surface-muted",
               )}
             >
-              <IconTile color={category.color}>
-                <Icon className="size-[19px]" stroke={1.7} />
-              </IconTile>
+              {sidebar.showCategoryIcons ? (
+                <IconTile color={category.color ?? "#FF5C00"}>
+                  <Icon className="size-[19px]" stroke={1.7} />
+                </IconTile>
+              ) : null}
               <span className="truncate">{language === "en" ? category.nameEn : category.name}</span>
-              {category.isNew && (
+              {isNew && sidebar.showNewBadges && (
                 <span className="ml-auto rounded bg-live px-1.5 py-0.5 text-[9px] font-bold text-live-foreground">
                   NEW
                 </span>
               )}
             </Link>
           );
-        })}
+      })}
     </nav>
   );
 }
 
-export function CategorySidebar({ className }: { className?: string }) {
+export function CategorySidebar({
+  className,
+  categories,
+}: {
+  className?: string;
+  categories?: Category[];
+}) {
   const { t } = useLanguage();
+  const { sidebar } = useSiteSettings();
 
   return (
     <aside className={cn("sticky top-14 flex h-fit max-h-[calc(100vh-3.5rem)] flex-col gap-5 overflow-y-auto py-4", className)}>
-      <CategoryLinks />
+      <CategoryLinks categories={categories} />
 
-      <div className="border-t border-border pt-4">
+      <div className={cn("border-t border-border pt-4", !sidebar.showSocialLinks && "hidden")}>
         <p className="px-2.5 pb-2 text-xs font-semibold tracking-wide text-text-muted uppercase">
           {t("sidebar.follow")}
         </p>

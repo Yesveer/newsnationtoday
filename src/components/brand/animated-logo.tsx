@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { siteConfig } from "@/config/site";
+import { useSiteSettings } from "@/components/site/site-settings-provider";
 import { cn } from "@/lib/cn";
 
 const SESSION_KEY = "newshub-logo-drawn";
@@ -41,14 +42,19 @@ const getServerSnapshot = () => false;
  * the loop via the global reduced-motion override in globals.css).
  * Shared with the future admin topbar (Phase 2).
  */
-export function AnimatedLogo({ size = 34, className }: { size?: number; className?: string }) {
-  const shouldAnimate = useSyncExternalStore(emptySubscribe, getShouldAnimate, getServerSnapshot);
+export function AnimatedLogo({ size, className }: { size?: number; className?: string }) {
+  const { brand } = useSiteSettings();
+  const animateSession = useSyncExternalStore(emptySubscribe, getShouldAnimate, getServerSnapshot);
+  // The logo file, its size, the name under it and the shine are all set in
+  // the Appearance screen.
+  const shouldAnimate = animateSession && brand.animateLogo;
 
   useEffect(() => {
     if (shouldAnimate) sessionStorage.setItem(SESSION_KEY, "1");
   }, [shouldAnimate]);
 
-  const width = Math.round(size * LOGO_ASPECT);
+  const height = size ?? brand.logoSize;
+  const width = Math.round(height * LOGO_ASPECT);
 
   return (
     <Link
@@ -58,17 +64,25 @@ export function AnimatedLogo({ size = 34, className }: { size?: number; classNam
     >
       <motion.span
         className="relative block"
-        style={{ width, height: size }}
+        style={{ width, height }}
         initial={shouldAnimate ? { opacity: 0, scale: 0.85, y: 6 } : false}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <Image src="/logo-nnt.png" alt={siteConfig.name} width={width} height={size} priority className="object-contain" />
-        <span aria-hidden className="animate-logo-shine pointer-events-none absolute inset-0 opacity-50" style={maskStyle} />
+        <Image src={brand.logoUrl} alt={brand.siteName || siteConfig.name} width={width} height={height} priority className="object-contain" />
+        {brand.animateLogo ? (
+          <span aria-hidden className="animate-logo-shine pointer-events-none absolute inset-0 opacity-50" style={maskStyle} />
+        ) : null}
       </motion.span>
-      <span className="text-[9px] leading-none font-bold tracking-[0.08em] whitespace-nowrap text-text uppercase sm:text-[11px] sm:tracking-[0.12em]">
-        {siteConfig.name}
-      </span>
+      {brand.showNameUnderLogo ? (
+        // `notranslate` keeps Google's translator from mangling the brand name.
+        <span
+          className="notranslate text-[9px] leading-none font-bold tracking-[0.08em] whitespace-nowrap text-text uppercase sm:text-[11px] sm:tracking-[0.12em]"
+          translate="no"
+        >
+          {brand.siteName || siteConfig.name}
+        </span>
+      ) : null}
     </Link>
   );
 }

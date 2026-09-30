@@ -1,18 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Hind, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { LanguageProvider } from "@/components/i18n/language-provider";
-import { Masthead } from "@/components/layout/masthead";
-import { HeroSection } from "@/components/home/hero-section";
-import { TrendingChips } from "@/components/home/trending-chips";
-import { getHeroArticles } from "@/lib/data/get-articles";
-import { CategorySidebar } from "@/components/layout/category-sidebar";
-import { TrendingWidget } from "@/components/layout/sidebar-widgets/trending-widget";
-import { VideoWidget } from "@/components/layout/sidebar-widgets/video-widget";
-import { RailFooter } from "@/components/layout/sidebar-widgets/rail-footer";
-import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
-import { Footer } from "@/components/layout/footer";
+import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/config/site";
+import { translateBootstrapScript } from "@/lib/i18n/google-translate";
 import "./globals.css";
 
 const hind = Hind({
@@ -46,32 +39,23 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const heroArticles = await getHeroArticles();
-
+/** Only the shared shell lives here: fonts, theme, language, toasts. The
+ *  reader-facing chrome (masthead, hero, rails) is in `(site)/layout.tsx`
+ *  and the newsroom chrome in `admin/layout.tsx`, so the two never mix. */
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="hi" suppressHydrationWarning className={`${hind.variable} ${inter.variable}`}>
-      <body className="flex min-h-screen flex-col pb-[calc(5.5rem+env(safe-area-inset-bottom))] antialiased lg:pb-0">
+      <body className="antialiased">
+        {/* Runs before hydration: puts the reader's stored language on Google's
+            cookie so a page arrives already translated instead of flipping.
+            Next hoists a beforeInteractive script into the document head. */}
+        <Script id="translate-bootstrap" strategy="beforeInteractive">
+          {translateBootstrapScript}
+        </Script>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <LanguageProvider>
-            <Masthead />
-            <HeroSection articles={heroArticles} />
-            <div className="mx-auto grid w-full max-w-[1440px] flex-1 grid-cols-1 gap-6 px-4 py-4 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8 xl:grid-cols-[260px_minmax(0,1fr)_300px]">
-              <CategorySidebar className="hidden lg:block" />
-              <main className="min-w-0">
-                <TrendingChips />
-                {children}
-              </main>
-              <aside className="hidden xl:block">
-                <div className="sticky top-16 flex flex-col gap-5">
-                  <TrendingWidget />
-                  <VideoWidget />
-                  <RailFooter />
-                </div>
-              </aside>
-            </div>
-            <Footer className="xl:hidden" />
-            <MobileTabBar />
+            {children}
+            <Toaster position="top-right" richColors />
           </LanguageProvider>
         </ThemeProvider>
       </body>

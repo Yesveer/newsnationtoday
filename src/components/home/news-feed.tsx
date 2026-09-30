@@ -5,6 +5,7 @@ import { StoryCard } from "@/components/article/story-card";
 import { StoryRow } from "@/components/article/story-row";
 import { PromoBanner } from "@/components/home/promo-banner";
 import { SectionHeader } from "@/components/home/section-header";
+import { useSiteSettings } from "@/components/site/site-settings-provider";
 import { staggerContainer, viewportOnce } from "@/lib/motion-variants";
 import type { TranslationKey } from "@/lib/i18n/dictionary";
 import type { ArticleWithRelations } from "@/types/article";
@@ -22,6 +23,16 @@ export function NewsFeed({
   articles: ArticleWithRelations[];
   headingKey?: TranslationKey;
 }) {
+  // Cards per row is an Appearance setting, so the grid follows it.
+  const { homepage } = useSiteSettings();
+  const perRow = Math.min(4, Math.max(2, homepage.cardsPerRow));
+  const gridClass =
+    perRow === 2
+      ? "sm:grid-cols-2"
+      : perRow === 4
+        ? "sm:grid-cols-2 xl:grid-cols-4"
+        : "sm:grid-cols-2 xl:grid-cols-3";
+
   const gridArticles = articles.slice(0, GRID_COUNT);
   const listArticles = articles.slice(GRID_COUNT);
 
@@ -35,7 +46,7 @@ export function NewsFeed({
             whileInView="visible"
             viewport={viewportOnce}
             variants={staggerContainer}
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+            className={`grid grid-cols-1 gap-4 ${gridClass}`}
           >
             {gridArticles.map((article) => (
               <StoryCard key={article.id} article={article} />

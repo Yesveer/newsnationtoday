@@ -6,7 +6,7 @@ import { motion } from "motion/react";
 import { Home, MonitorPlay, Search, Video } from "lucide-react";
 import { useLanguage } from "@/components/i18n/language-provider";
 import type { TranslationKey } from "@/lib/i18n/dictionary";
-import { utilityLinks } from "@/config/nav.config";
+import { useSiteSettings } from "@/components/site/site-settings-provider";
 import { cn } from "@/lib/cn";
 
 const tabMeta: Record<string, { icon: typeof Home; motion: string; labelKey: TranslationKey }> = {
@@ -24,12 +24,21 @@ const tabMeta: Record<string, { icon: typeof Home; motion: string; labelKey: Tra
 export function MobileTabBar() {
   const pathname = usePathname();
   const { t } = useLanguage();
+  // Which tabs, how big the glyphs are and whether the dock is frosted all
+  // come from the Appearance screen.
+  const { mobileDock } = useSiteSettings();
+  const tabs = mobileDock.items.filter((item) => item.visible);
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:hidden">
       <nav
         aria-label={t("nav.home")}
-        className="pointer-events-auto relative max-w-full overflow-hidden rounded-full border border-black/10 bg-surface/45 shadow-[0_14px_45px_-10px_rgb(0_0_0/0.5)] backdrop-blur-2xl backdrop-saturate-200 dark:border-white/15 dark:bg-surface/30"
+        className={cn(
+          "pointer-events-auto relative max-w-full overflow-hidden rounded-full border border-black/10 shadow-[0_14px_45px_-10px_rgb(0_0_0/0.5)] dark:border-white/15",
+          mobileDock.glass
+            ? "bg-surface/45 backdrop-blur-2xl backdrop-saturate-200 dark:bg-surface/30"
+            : "bg-surface dark:bg-surface",
+        )}
       >
         {/* specular sheen along the top edge — the glass cue */}
         <span
@@ -41,9 +50,9 @@ export function MobileTabBar() {
             dock on every device — a 320px phone and an 834px tablet get the
             same proportions instead of a stretched bar or a tiny pill. */}
         <ul className="relative flex items-center gap-1 p-2">
-          {utilityLinks.map((link) => {
+          {tabs.map((link) => {
             const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
-            const meta = tabMeta[link.key] ?? tabMeta.home;
+            const meta = tabMeta[link.id] ?? tabMeta.home;
             const Icon = meta.icon;
 
             return (
@@ -64,7 +73,10 @@ export function MobileTabBar() {
                     active ? "text-accent" : "text-text-muted",
                   )}
                 >
-                  <Icon className={cn("size-7", active && meta.motion)} />
+                  <Icon
+                    className={cn(active && meta.motion)}
+                    style={{ width: mobileDock.iconSize, height: mobileDock.iconSize }}
+                  />
                 </Link>
               </li>
             );

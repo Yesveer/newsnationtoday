@@ -1,90 +1,67 @@
-import { articles } from "@/data/articles";
-import { authors } from "@/data/authors";
-import { categories } from "@/data/categories";
-import type { Article, ArticleWithRelations } from "@/types/article";
+import { fetchArticle, fetchArticles } from "@/lib/api/public";
+import type { ArticleWithRelations } from "@/types/article";
 
-function resolve(article: Article): ArticleWithRelations {
-  const category = categories.find((c) => c.id === article.categoryId);
-  const author = authors.find((a) => a.id === article.authorId);
-  if (!category || !author) {
-    throw new Error(`Article ${article.slug} has a dangling category/author reference`);
-  }
-  return { ...article, category, author };
-}
-
-function publishedSortedByDate(): Article[] {
-  return articles
-    .filter((article) => article.status === "published")
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-}
+/** Every read the public site does goes through here, and every one of these
+ *  now comes from the newsroom database via the API — what an editor publishes
+ *  in the admin portal is what a reader gets. */
 
 /** Flat reverse-chronological feed across every category — the homepage's main column. */
-export async function getFeedArticles(options?: { limit?: number; excludeIds?: string[] }): Promise<ArticleWithRelations[]> {
-  const excludeIds = options?.excludeIds ?? [];
-  const results = publishedSortedByDate()
-    .filter((article) => !excludeIds.includes(article.id))
-    .map(resolve);
-
-  return options?.limit ? results.slice(0, options.limit) : results;
+export async function getFeedArticles(options?: {
+  limit?: number;
+  excludeIds?: string[];
+}): Promise<ArticleWithRelations[]> {
+  return fetchArticles({ limit: options?.limit ?? 50, exclude: options?.excludeIds });
 }
 
 export async function getArticlesByCategory(
   categorySlug: string,
   options?: { excludeIds?: string[]; limit?: number },
 ): Promise<ArticleWithRelations[]> {
-  const category = categories.find((c) => c.slug === categorySlug);
-  if (!category) return [];
-
-  const excludeIds = options?.excludeIds ?? [];
-  const results = publishedSortedByDate()
-    .filter((article) => article.categoryId === category.id && !excludeIds.includes(article.id))
-    .map(resolve);
-
-  return options?.limit ? results.slice(0, options.limit) : results;
+  return fetchArticles({
+    category: categorySlug,
+    limit: options?.limit ?? 50,
+    exclude: options?.excludeIds,
+  });
 }
 
 export async function getArticleByCategoryAndSlug(
   categorySlug: string,
   slug: string,
 ): Promise<ArticleWithRelations | null> {
-  const article = articles.find(
-    (a) => a.slug === slug && a.status === "published",
-  );
-  if (!article) return null;
-
-  const resolved = resolve(article);
-  if (resolved.category.slug !== categorySlug) return null;
-
-  return resolved;
+  const result = await fetchArticle(categorySlug, slug);
+  return result?.article ?? null;
 }
 
 export async function getRelatedArticles(
   article: ArticleWithRelations,
   count = 3,
 ): Promise<ArticleWithRelations[]> {
-  return publishedSortedByDate()
-    .filter((a) => a.categoryId === article.categoryId && a.id !== article.id)
-    .slice(0, count)
-    .map(resolve);
+  const related = await fetchArticles({
+    category: article.category.slug,
+    exclude: [article.id],
+    limit: count,
+  });
+  return related.slice(0, count);
 }
 
 /** Every published article, for the client-side search placeholder. */
 export async function getAllArticles(): Promise<ArticleWithRelations[]> {
-  return publishedSortedByDate().map(resolve);
+  return fetchArticles({ limit: 100 });
 }
 
 /** Lead stories for the homepage hero — featured first, then the most recent. */
 export async function getHeroArticles(count = 8): Promise<ArticleWithRelations[]> {
-  const published = publishedSortedByDate();
-  const featured = published.filter((article) => article.isFeatured);
-  const rest = published.filter((article) => !article.isFeatured);
+  const [featured, latest] = await Promise.all([
+    fetchArticles({ featured: true, limit: count }),
+    fetchArticles({ limit: count }),
+  ]);
 
-  return [...featured, ...rest].slice(0, count).map(resolve);
+  const seen = new Set(featured.map((article) => article.id));
+  const filler = latest.filter((article) => !seen.has(article.id));
+  return [...featured, ...filler].slice(0, count);
 }
 
-/** Video-flagged articles, for the /videos hub. */
+/** Video-flagged stories, for the /videos hub and the rail widget. */
 export async function getVideoArticles(): Promise<ArticleWithRelations[]> {
-  return publishedSortedByDate()
-    .filter((article) => article.isVideo)
-    .map(resolve);
+  return fetchArticles({ type: "video", limit: 50 });
 }

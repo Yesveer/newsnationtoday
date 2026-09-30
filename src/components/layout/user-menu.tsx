@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
-import { ChevronDown, HelpCircle, LogIn, MessageSquare, Monitor, Moon, Sun, User } from "lucide-react";
+import { ChevronDown, HelpCircle, LayoutDashboard, LogIn, MessageSquare, Monitor, Moon, Sun, User } from "lucide-react";
 import {
   NavDropdown,
   NavDropdownItem,
@@ -10,6 +10,7 @@ import {
   NavDropdownSeparator,
 } from "@/components/ui/nav-dropdown";
 import { useLanguage } from "@/components/i18n/language-provider";
+import { useSignedIn } from "@/lib/api/session-flag";
 import type { TranslationKey } from "@/lib/i18n/dictionary";
 
 const emptySubscribe = () => () => {};
@@ -23,6 +24,7 @@ const themeOptions: { value: string; icon: typeof Sun; labelKey: TranslationKey 
 export function UserMenu() {
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
+  const signedIn = useSignedIn();
   const mounted = useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -43,12 +45,19 @@ export function UserMenu() {
     >
       <div className="px-2.5 py-2">
         <p className="text-sm font-semibold text-text">{t("menu.account")}</p>
-        <p className="text-xs text-text-muted">{t("menu.guest")}</p>
+        <p className="text-xs text-text-muted">{signedIn ? t("menu.signedIn") : t("menu.guest")}</p>
       </div>
 
-      <NavDropdownItem href="/login">
-        <LogIn className="size-4" /> {t("menu.login")}
-      </NavDropdownItem>
+      {/* Readers get a way in; only an actual session sees the portal. */}
+      {signedIn ? (
+        <NavDropdownItem href="/admin">
+          <LayoutDashboard className="size-4" /> {t("menu.admin")}
+        </NavDropdownItem>
+      ) : (
+        <NavDropdownItem href="/login">
+          <LogIn className="size-4" /> {t("menu.login")}
+        </NavDropdownItem>
+      )}
 
       <NavDropdownSeparator />
 

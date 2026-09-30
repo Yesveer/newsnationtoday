@@ -7,16 +7,19 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { formatRelativeTime } from "@/lib/format-date";
 import { useLanguage } from "@/components/i18n/language-provider";
+import { useSiteSettings } from "@/components/site/site-settings-provider";
 import { cn } from "@/lib/cn";
 import type { ArticleWithRelations } from "@/types/article";
 
-const SLIDE_MS = 5000;
 
 /** Homepage-only lead block: an auto-rotating headline slider plus a top-stories rail. */
 export function HeroSection({ articles }: { articles: ArticleWithRelations[] }) {
   const pathname = usePathname();
   const { language, t } = useLanguage();
   const reduceMotion = useReducedMotion();
+  // Slide speed, the zoom and the LIVE badge are Appearance settings.
+  const { hero } = useSiteSettings();
+  const slideMs = Math.max(2, hero.autoplaySeconds) * 1000;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -25,9 +28,9 @@ export function HeroSection({ articles }: { articles: ArticleWithRelations[] }) 
 
   useEffect(() => {
     if (paused || reduceMotion || slides.length <= 1) return;
-    const timer = setInterval(() => setIndex((current) => (current + 1) % slides.length), SLIDE_MS);
+    const timer = setInterval(() => setIndex((current) => (current + 1) % slides.length), slideMs);
     return () => clearInterval(timer);
-  }, [paused, reduceMotion, slides.length]);
+  }, [paused, reduceMotion, slides.length, slideMs]);
 
   if (pathname !== "/" || slides.length === 0) return null;
 
@@ -60,7 +63,7 @@ export function HeroSection({ articles }: { articles: ArticleWithRelations[] }) 
                   fill
                   priority
                   sizes="(min-width: 1024px) 62vw, 100vw"
-                  className={cn("object-cover", !reduceMotion && "animate-kenburns")}
+                  className={cn("object-cover", !reduceMotion && hero.kenBurns && "animate-kenburns")}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
               </motion.div>
@@ -70,7 +73,7 @@ export function HeroSection({ articles }: { articles: ArticleWithRelations[] }) 
               <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold text-accent-foreground">
                 {categoryName}
               </span>
-              {active.isBreaking && (
+              {active.isBreaking && hero.showLiveBadge && (
                 <span className="flex items-center gap-1.5 rounded-full bg-live px-2.5 py-1 text-[11px] font-bold text-live-foreground">
                   <span className="animate-live-pulse size-1.5 rounded-full bg-live-foreground" aria-hidden />
                   {t("label.live")}
