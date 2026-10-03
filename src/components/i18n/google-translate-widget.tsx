@@ -1,7 +1,6 @@
 "use client";
 
 import Script from "next/script";
-import { siteLanguages, SOURCE_LANGUAGE } from "@/config/languages.config";
 import { useLanguage } from "@/components/i18n/language-provider";
 
 declare global {
@@ -34,22 +33,12 @@ export function GoogleTranslateWidget({ skipLanguages = [] }: { skipLanguages?: 
   // Google handle only the languages we do not write ourselves.
   if (skipLanguages.includes(language)) return null;
 
+  // The init callback and the language list are defined by the
+  // `beforeInteractive` bootstrap in the root layout, so they exist before
+  // this script can call them.
   return (
     <>
       <div id={ELEMENT_ID} aria-hidden className="sr-only" />
-      <Script id="google-translate-init" strategy="afterInteractive">
-        {`window.googleTranslateElementInit = function () {
-          if (!window.google || !window.google.translate) return;
-          new window.google.translate.TranslateElement(
-            {
-              pageLanguage: ${JSON.stringify(SOURCE_LANGUAGE)},
-              includedLanguages: ${JSON.stringify(siteLanguages.map((language) => language.code).join(","))},
-              autoDisplay: false
-            },
-            ${JSON.stringify(ELEMENT_ID)}
-          );
-        };`}
-      </Script>
       <Script
         id="google-translate-element"
         strategy="afterInteractive"

@@ -14,10 +14,12 @@ import {
   IconTrash,
   IconUserCheck,
   IconUserPause,
+  IconUserCircle,
   IconUserPlus,
   IconUsers,
   IconUserX,
 } from "@tabler/icons-react";
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -65,6 +67,8 @@ import { RoleBadge } from "@/components/admin/role-badge";
 import { StatCard } from "@/components/admin/stat-card";
 import { useAdminSession } from "@/components/admin/admin-session";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
+import { UserProfileFields } from "@/components/admin/users/user-profile-fields";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { roleLabels } from "@/lib/admin/permissions";
 import { toneStyle, type ToneLevel } from "@/lib/admin/tone";
 import { formatDate, formatRelative } from "@/lib/admin/format";
@@ -94,7 +98,10 @@ export function UsersView() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", desk: "", role: "reporter" as UserRole, password: "" });
+  const [form, setForm] = useState({ name: "", email: "", role: "reporter" as UserRole, password: "" });
+  // The optional half of the profile, kept separate so the required fields
+  // stay obvious.
+  const [profile, setProfile] = useState<api.UserProfileInput>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [secret, setSecret] = useState<{ title: string; hint: string; value: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<AdminUser | null>(null);
@@ -141,16 +148,22 @@ export function UsersView() {
     setFormErrors({});
     try {
       const result = await api.createUser({
+        ...profile,
         name: form.name,
         email: form.email,
         role: form.role,
-        desk: form.desk || undefined,
         password: form.password || undefined,
       });
       setInviteOpen(false);
-      setForm({ name: "", email: "", desk: "", role: "reporter", password: "" });
+      setForm({ name: "", email: "", role: "reporter", password: "" });
+      setProfile({});
       refresh();
 
+      if (result.emailSent) {
+        toast.success(t("यूज़र बन गया", "User created"), {
+          description: t("लॉगिन की जानकारी ईमेल कर दी गई है।", "Their sign-in details were emailed to them."),
+        });
+      }
       if (result.inviteToken) {
         setSecret({
           title: t("इनवाइट लिंक तैयार है", "Invite link ready"),
@@ -329,7 +342,9 @@ export function UsersView() {
                             </Avatar>
                             <div className="min-w-0">
                               <p className="truncate text-[13.5px] font-medium text-text">
-                                {user.name}
+                                <Link href={`/admin/users/${user.id}`} className="hover:text-accent">
+                                  {user.name}
+                                </Link>
                                 {isSelf ? (
                                   <span className="ml-1.5 text-[11px] text-text-muted">({t("आप", "you")})</span>
                                 ) : null}
@@ -364,6 +379,12 @@ export function UsersView() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/admin/users/${user.id}`}>
+                                  <IconUserCircle className="size-4" /> {t("पूरी जानकारी", "Full details")}
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
                               <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px] text-text-muted">
                                 <IconShieldLock className="size-3.5" /> {t("रोल बदलें", "Change role")}
                               </DropdownMenuLabel>
@@ -433,7 +454,7 @@ export function UsersView() {
 
       {/* --- create user --- */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[90vh] sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("नया यूज़र जोड़ें", "Add a user")}</DialogTitle>
             <DialogDescription>
@@ -443,66 +464,70 @@ export function UsersView() {
               )}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="invite-name">{t("पूरा नाम", "Full name")}</Label>
-              <Input
-                id="invite-name"
-                value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder={t("जैसे: सुनीता राव", "e.g. Sunita Rao")}
-              />
-              {formErrors.name ? <p className="text-[11.5px] text-destructive">{formErrors.name}</p> : null}
+          <ScrollArea className="max-h-[62vh] pr-3">
+            <div className="flex flex-col gap-5 pb-1">
+              <section className="space-y-3">
+                <p className="text-[11px] font-semibold tracking-wide text-text-muted uppercase">
+                  {t("ज़रूरी जानकारी", "Required")}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invite-name">{t("पूरा नाम", "Full name")}</Label>
+                    <Input
+                      id="invite-name"
+                      value={form.name}
+                      onChange={(event) => setForm({ ...form, name: event.target.value })}
+                      placeholder={t("जैसे: सुनीता राव", "e.g. Sunita Rao")}
+                    />
+                    {formErrors.name ? <p className="text-[11.5px] text-destructive">{formErrors.name}</p> : null}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invite-email">{t("ईमेल", "Email")}</Label>
+                    <Input
+                      id="invite-email"
+                      type="email"
+                      value={form.email}
+                      onChange={(event) => setForm({ ...form, email: event.target.value })}
+                      placeholder="name@newsnationtoday.in"
+                    />
+                    {formErrors.email ? <p className="text-[11.5px] text-destructive">{formErrors.email}</p> : null}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{t("रोल", "Role")}</Label>
+                    <Select value={form.role} onValueChange={(value) => setForm({ ...form, role: value as UserRole })}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allRoles.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {t(roleLabels[role].name, roleLabels[role].nameEn)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formErrors.role ? <p className="text-[11.5px] text-destructive">{formErrors.role}</p> : null}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invite-password">{t("पासवर्ड (वैकल्पिक)", "Password (optional)")}</Label>
+                    <Input
+                      id="invite-password"
+                      value={form.password}
+                      onChange={(event) => setForm({ ...form, password: event.target.value })}
+                      placeholder={t("खाली = इनवाइट लिंक", "Empty = invite link")}
+                    />
+                    {formErrors.password ? (
+                      <p className="text-[11.5px] text-destructive">{formErrors.password}</p>
+                    ) : null}
+                  </div>
+                </div>
+              </section>
+
+              {/* Everything below is optional — it can be filled in later, by
+                  an administrator or by the person themselves. */}
+              <UserProfileFields value={profile} errors={formErrors} onChange={setProfile} />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="invite-email">{t("ईमेल", "Email")}</Label>
-              <Input
-                id="invite-email"
-                type="email"
-                value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
-                placeholder="name@newsnationtoday.in"
-              />
-              {formErrors.email ? <p className="text-[11.5px] text-destructive">{formErrors.email}</p> : null}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="invite-desk">{t("डेस्क / बीट", "Desk / beat")}</Label>
-              <Input
-                id="invite-desk"
-                value={form.desk}
-                onChange={(event) => setForm({ ...form, desk: event.target.value })}
-                placeholder={t("जैसे: खेल", "e.g. Sports")}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("रोल", "Role")}</Label>
-              <Select value={form.role} onValueChange={(value) => setForm({ ...form, role: value as UserRole })}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {allRoles.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {t(roleLabels[role].name, roleLabels[role].nameEn)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formErrors.role ? <p className="text-[11.5px] text-destructive">{formErrors.role}</p> : null}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="invite-password">
-                {t("पासवर्ड (वैकल्पिक)", "Password (optional)")}
-              </Label>
-              <Input
-                id="invite-password"
-                value={form.password}
-                onChange={(event) => setForm({ ...form, password: event.target.value })}
-                placeholder={t("खाली = इनवाइट लिंक", "Empty = invite link")}
-              />
-              {formErrors.password ? <p className="text-[11.5px] text-destructive">{formErrors.password}</p> : null}
-            </div>
-          </div>
+          </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>
               {t("रद्द करें", "Cancel")}

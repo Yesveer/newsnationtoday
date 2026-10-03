@@ -20,8 +20,8 @@ export function readTranslateCookie(): string | null {
   return target || null;
 }
 
-export function writeTranslateCookie(target: string) {
-  const value = `/${SOURCE_LANGUAGE}/${target}`;
+export function writeTranslateCookie(target: string, source: string = SOURCE_LANGUAGE) {
+  const value = `/${source}/${target}`;
   for (const domain of cookieDomains()) {
     document.cookie = `${COOKIE}=${value};path=/${domain};max-age=${60 * 60 * 24 * 365}`;
   }
@@ -35,21 +35,48 @@ export function clearTranslateCookie() {
 
 /** Point Google at `target`, or drop the cookie when the target *is* the
  *  language the site is written in (no translation needed). */
-export function applyTranslateTarget(target: string) {
-  if (target === SOURCE_LANGUAGE) clearTranslateCookie();
-  else writeTranslateCookie(target);
+export function applyTranslateTarget(target: string, source: string = SOURCE_LANGUAGE) {
+  if (target === source) clearTranslateCookie();
+  else writeTranslateCookie(target, source);
 }
 
-/** Runs during HTML parsing, before Google's script boots.
+/** Runs during HTML parsing, before anything else.
  *
- *  Google reads the `googtrans` cookie exactly once at init, so the reader's
- *  stored language has to be on the cookie before that — otherwise the first
- *  paint stays in Hindi until they switch manually. */
-export const translateBootstrapScript = `(function(){try{
-var stored=localStorage.getItem("newshub-language")||"${DEFAULT_LANGUAGE}";
+ *  Two jobs, both of which have to happen early:
+ *
+ *  1. Put the reader's stored language on Google's cookie. Google reads it
+ *     exactly once at init, so the page arrives already translated instead of
+ *     flipping a moment later.
+ *  2. Define the init callback. Google's element.js calls
+ *     `googleTranslateElementInit` as soon as it loads; if the callback is
+ *     defined later by a React-rendered script, the call can land first and
+ *     the page silently never translates.
+ *
+ *  The language list is inlined by the server, so it is whatever the newsroom
+ *  configured. */
+export function translateBootstrapScript(
+  defaultLanguage: string = DEFAULT_LANGUAGE,
+  source: string = SOURCE_LANGUAGE,
+  includedLanguages: string[] = [],
+): string {
+  const included = includedLanguages.length > 0 ? includedLanguages.join(",") : defaultLanguage;
+
+  return `(function(){try{
+var stored=localStorage.getItem("newshub-language")||${JSON.stringify(defaultLanguage)};
+var source=${JSON.stringify(source)};
 var host=location.hostname;
 var domains=(host==="localhost"||/^[\\d.]+$/.test(host))?[""]:["",";domain="+host,";domain=."+host];
 for(var i=0;i<domains.length;i++){
-  document.cookie="googtrans="+(stored==="${SOURCE_LANGUAGE}"?"":"/${SOURCE_LANGUAGE}/"+stored)+";path=/"+domains[i]+";max-age="+(stored==="${SOURCE_LANGUAGE}"?0:31536000);
+  document.cookie="googtrans="+(stored===source?"":"/"+source+"/"+stored)+";path=/"+domains[i]+";max-age="+(stored===source?0:31536000);
 }
-}catch(e){}})();`;
+}catch(e){}
+window.googleTranslateElementInit=function(){
+  if(!window.google||!window.google.translate)return;
+  new window.google.translate.TranslateElement({
+    pageLanguage:${JSON.stringify(source)},
+    includedLanguages:${JSON.stringify(included)},
+    autoDisplay:false
+  },"google_translate_element");
+};
+})();`;
+}

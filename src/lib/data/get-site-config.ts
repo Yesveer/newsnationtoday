@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { fetchSiteConfig } from "@/lib/api/public";
 import { defaultAppearance, type AppearanceSettings } from "@/config/appearance.config";
 
@@ -24,8 +25,11 @@ export interface SiteSettings extends AppearanceSettings {
 }
 
 /** Reads the live configuration, falling back to the built-in defaults when
- *  the API is unreachable — a missing backend must not blank the site. */
-export async function getSiteSettings(): Promise<SiteSettings> {
+ *  the API is unreachable — a missing backend must not blank the site.
+ *
+ *  Wrapped in `cache` so the root layout and the site layout share one fetch
+ *  per request instead of asking the API twice. */
+export const getSiteSettings = cache(async (): Promise<SiteSettings> => {
   const config = await fetchSiteConfig<SiteSettings>();
   if (!config) return defaultAppearance;
 
@@ -42,5 +46,6 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     sidebar: { ...defaultAppearance.sidebar, ...config.sidebar },
     rail: { ...defaultAppearance.rail, ...config.rail },
     mobileDock: { ...defaultAppearance.mobileDock, ...config.mobileDock },
+    languages: { ...defaultAppearance.languages, ...config.languages },
   };
-}
+});

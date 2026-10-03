@@ -1,5 +1,6 @@
 import type { ArticleWithRelations } from "@/types/article";
 import type { Category } from "@/types/category";
+import type { Topic } from "@/config/topics.config";
 
 /** Server-side reads of the public API.
  *
@@ -34,12 +35,23 @@ interface ApiArticle {
   seo?: { metaTitle?: string; metaDescription?: string; keywords?: string };
 }
 
+interface ApiTopic {
+  slug: string;
+  name: string;
+  nameEn: string;
+  badge?: string;
+  color: string;
+  iconUrl?: string;
+  order: number;
+}
+
 export interface ApiCategory {
   id: string;
   slug: string;
   name: string;
   nameEn: string;
   color: string;
+  iconUrl?: string;
   order: number;
   isNew: boolean;
   visible: boolean;
@@ -67,6 +79,7 @@ function toCategory(category: ApiCategory): Category {
     name: category.name,
     nameEn: category.nameEn,
     color: category.color,
+    iconUrl: category.iconUrl,
     order: category.order,
     parentId: null,
     createdAt: category.createdAt,
@@ -187,6 +200,21 @@ export async function fetchArticle(
     article: toArticle(data.article, categories),
     related: (data.related ?? []).map((item) => toArticle(item, categories)),
   };
+}
+
+/** The sub-topics a category page shows as tiles. */
+export async function fetchTopics(categorySlug: string): Promise<Topic[]> {
+  const data = await get<{ topics: ApiTopic[] }>(
+    `/public/topics?category=${encodeURIComponent(categorySlug)}`,
+  );
+  return (data?.topics ?? []).map((topic) => ({
+    slug: topic.slug,
+    name: topic.name,
+    nameEn: topic.nameEn,
+    badge: topic.badge ?? "",
+    color: topic.color,
+    iconUrl: topic.iconUrl,
+  }));
 }
 
 /** The site configuration the newsroom edits in the admin portal. */

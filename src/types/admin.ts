@@ -3,6 +3,30 @@ export type UserRole = "administrator" | "admin" | "reporter";
 
 export type UserStatus = "active" | "invited" | "suspended";
 
+/** Postal address on a newsroom profile. */
+export interface UserAddress {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
+}
+
+/** Government ID numbers. The list endpoint returns these masked; the detail
+ *  endpoint returns the real values to an administrator or to the person. */
+export interface UserIdentity {
+  aadhaar?: string;
+  pan?: string;
+  passport?: string;
+}
+
+export interface UserEmergencyContact {
+  name?: string;
+  relation?: string;
+  phone?: string;
+}
+
 export interface AdminUser {
   id: string;
   name: string;
@@ -16,6 +40,19 @@ export interface AdminUser {
   joinedAt: string;
   lastActiveAt: string;
   storiesCount: number;
+
+  // Everything below is optional — only name, email and role are required.
+  altPhone?: string;
+  reportingArea?: string;
+  employeeId?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  bio?: string;
+  address?: UserAddress;
+  identity?: UserIdentity;
+  emergencyContact?: UserEmergencyContact;
+  /** True when the ID numbers above are masked rather than the real values. */
+  identityMasked?: boolean;
 }
 
 /** Editorial workflow. A reporter can only push a story up to `in_review`;

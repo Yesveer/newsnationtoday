@@ -3,7 +3,6 @@
 import { ChevronDown, Globe } from "lucide-react";
 import { NavDropdown, NavDropdownItem, NavDropdownLabel } from "@/components/ui/nav-dropdown";
 import { useLanguage } from "@/components/i18n/language-provider";
-import { findLanguage, siteLanguages } from "@/config/languages.config";
 
 /** Reader-facing language switch. English and Hindi use the site's own strings;
  *  the rest are produced by the Google translator mounted in the site layout.
@@ -12,8 +11,11 @@ import { findLanguage, siteLanguages } from "@/config/languages.config";
  *  machine-translated into the language you're already reading is useless — the
  *  point of this menu is to show each option in its own script, always. */
 export function LanguageMenu() {
-  const { language, setLanguage, t } = useLanguage();
-  const current = findLanguage(language) ?? siteLanguages[0];
+  const { language, setLanguage, t, options } = useLanguage();
+  const current = options.find((option) => option.code === language) ?? options[0];
+
+  // Nothing to switch between — hide the control rather than show one option.
+  if (options.length < 2) return null;
 
   return (
     <NavDropdown
@@ -24,14 +26,14 @@ export function LanguageMenu() {
           <Globe className="size-4" />
           {/* Label drops on very narrow phones so the header cluster can't overflow. */}
           <span className="notranslate text-sm font-medium max-[380px]:hidden" translate="no">
-            {current.label}
+            {current?.label}
           </span>
           <ChevronDown className="size-3.5" />
         </>
       }
     >
       <NavDropdownLabel>{t("menu.language")}</NavDropdownLabel>
-      {siteLanguages.map((option) => (
+      {options.map((option) => (
         <NavDropdownItem
           key={option.code}
           active={language === option.code}

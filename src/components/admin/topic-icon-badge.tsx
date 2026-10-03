@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { IconFlame } from "@tabler/icons-react";
 import { stateMapPaths } from "@/config/state-maps";
 import { toneTileStyle } from "@/lib/admin/tone";
@@ -15,7 +16,9 @@ export function TopicIconBadge({ topic }: { topic: Topic }) {
       className="flex size-10 shrink-0 items-center justify-center rounded-lg"
       style={toneTileStyle()}
     >
-      {mapPath ? (
+      {topic.iconUrl ? (
+        <Image src={topic.iconUrl} alt="" width={24} height={24} className="size-6 object-contain" unoptimized />
+      ) : mapPath ? (
         <svg viewBox="0 0 100 100" className="size-6" fill="currentColor" aria-hidden>
           <path d={mapPath} />
         </svg>

@@ -85,6 +85,39 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   return payload as T;
 }
 
+/** Uploads a file as multipart form data.
+ *
+ *  Kept separate from `apiFetch` because the browser has to set the multipart
+ *  boundary itself — adding a Content-Type header here would break the body. */
+export async function apiUpload<T>(path: string, form: FormData, retrying = false): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers,
+    credentials: "include",
+    body: form,
+  });
+
+  if (response.status === 401 && !retrying) {
+    const refreshed = await refreshSession();
+    if (refreshed) return apiUpload<T>(path, form, true);
+  }
+
+  const payload = await parse(response);
+  if (!response.ok) {
+    const error = (payload ?? {}) as { error?: string; message?: string; fields?: Record<string, string> };
+    throw new ApiError(
+      response.status,
+      error.error ?? "upload_failed",
+      error.message ?? "The file could not be uploaded",
+      error.fields,
+    );
+  }
+  return payload as T;
+}
+
 /** Exchanges the refresh cookie for a new access token.
  *  Concurrent callers share one in-flight request. */
 export function refreshSession(): Promise<boolean> {

@@ -9,6 +9,7 @@ import {
   IconBrandYoutube,
   IconAlertTriangle,
   IconDeviceFloppy,
+  IconCloud,
   IconMail,
   IconWorld,
 } from "@tabler/icons-react";
@@ -21,6 +22,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/admin/page-header";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
+import { useAdminSession } from "@/components/admin/admin-session";
+import { SmtpSettingsPanel } from "@/components/admin/smtp-settings";
+import { StorageSettingsPanel } from "@/components/admin/storage-settings";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/admin";
@@ -30,6 +34,8 @@ import { siteConfig } from "@/config/site";
 
 export function SettingsView() {
   const { t } = useAdminLang();
+  // Mail settings carry a password, so they stay with the administrator.
+  const { can } = useAdminSession();
   // Identity, contact, SEO and the switches all live in the same site
   // configuration document the Appearance screen edits.
   const [settings, setSettings] = useState<SiteSettings>(defaultAppearance);
@@ -124,6 +130,16 @@ export function SettingsView() {
           <TabsTrigger value="general" className="rounded-md text-[13px]">{t("सामान्य", "General")}</TabsTrigger>
           <TabsTrigger value="social" className="rounded-md text-[13px]">{t("सोशल", "Social")}</TabsTrigger>
           <TabsTrigger value="seo" className="rounded-md text-[13px]">SEO</TabsTrigger>
+          {can("users.manage") ? (
+            <TabsTrigger value="email" className="rounded-md text-[13px]">
+              <IconMail className="size-3.5" /> {t("ईमेल", "Email")}
+            </TabsTrigger>
+          ) : null}
+          {can("users.manage") ? (
+            <TabsTrigger value="media" className="rounded-md text-[13px]">
+              <IconCloud className="size-3.5" /> {t("मीडिया", "Media")}
+            </TabsTrigger>
+          ) : null}
           <TabsTrigger value="advanced" className="rounded-md text-[13px]">{t("एडवांस", "Advanced")}</TabsTrigger>
         </TabsList>
 
@@ -273,6 +289,18 @@ export function SettingsView() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {can("users.manage") ? (
+          <TabsContent value="email" className="mt-3">
+            <SmtpSettingsPanel />
+          </TabsContent>
+        ) : null}
+
+        {can("users.manage") ? (
+          <TabsContent value="media" className="mt-3">
+            <StorageSettingsPanel />
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="advanced" className="mt-3">
           <Card>

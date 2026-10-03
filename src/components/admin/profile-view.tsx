@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/admin/page-header";
 import { RoleBadge } from "@/components/admin/role-badge";
 import { useAdminAuth, useAdminSession } from "@/components/admin/admin-session";
+import { UserProfileFields } from "@/components/admin/users/user-profile-fields";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/admin";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
@@ -23,7 +24,21 @@ export function ProfileView() {
   const { user, role } = useAdminSession();
   const { t } = useAdminLang();
   const { reload } = useAdminAuth();
-  const [profile, setProfile] = useState({ name: user.name, desk: user.desk ?? "", phone: user.phone ?? "" });
+  const [profile, setProfile] = useState({ name: user.name });
+  // Everything optional lives in one object, shared with the admin's own form.
+  const [details, setDetails] = useState<api.UserProfileInput>({
+    phone: user.phone,
+    altPhone: user.altPhone,
+    desk: user.desk,
+    reportingArea: user.reportingArea,
+    employeeId: user.employeeId,
+    dateOfBirth: user.dateOfBirth,
+    gender: user.gender,
+    bio: user.bio,
+    address: user.address,
+    identity: user.identity,
+    emergencyContact: user.emergencyContact,
+  });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
   const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
@@ -34,7 +49,7 @@ export function ProfileView() {
     setSavingProfile(true);
     setProfileErrors({});
     try {
-      await api.updateProfile({ name: profile.name, desk: profile.desk, phone: profile.phone });
+      await api.updateProfile({ ...details, name: profile.name });
       await reload();
       toast.success(t("प्रोफ़ाइल सेव हो गई", "Profile saved"));
     } catch (error) {
@@ -127,23 +142,9 @@ export function ProfileView() {
                     {t("ईमेल सिर्फ़ एडमिनिस्ट्रेटर बदल सकता है।", "Only an administrator can change the email.")}
                   </p>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="profile-desk">{t("डेस्क / बीट", "Desk / beat")}</Label>
-                  <Input
-                    id="profile-desk"
-                    value={profile.desk}
-                    onChange={(event) => setProfile({ ...profile, desk: event.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="profile-phone">{t("फ़ोन", "Phone")}</Label>
-                  <Input
-                    id="profile-phone"
-                    value={profile.phone}
-                    onChange={(event) => setProfile({ ...profile, phone: event.target.value })}
-                  />
-                </div>
               </div>
+
+              <UserProfileFields value={details} errors={profileErrors} onChange={setDetails} />
             </CardContent>
           </Card>
 

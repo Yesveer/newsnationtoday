@@ -1,4 +1,5 @@
 import { siteConfig } from "@/config/site";
+import { siteLanguages, SOURCE_LANGUAGE, DEFAULT_LANGUAGE } from "@/config/languages.config";
 
 /** Everything on the public site that an admin can change from the portal.
  *  The forms in `/admin/appearance` edit exactly this shape, so wiring the Go
@@ -16,6 +17,26 @@ export interface HomeSectionSetting {
   label: string;
   description: string;
   visible: boolean;
+}
+
+/** One language offered on the website, as the admin portal stores it. */
+export interface LanguageSetting {
+  /** Google Translate language code — hi, en, mr, pa, ur, ta… */
+  code: string;
+  /** Shown in the menu, in the language's own script. */
+  label: string;
+  englishLabel: string;
+  /** Right-to-left scripts (Urdu, Arabic) flip the page direction. */
+  rtl?: boolean;
+  enabled: boolean;
+}
+
+export interface LanguageSettings {
+  /** What the newsroom writes in — everything is translated *from* this. */
+  source: string;
+  /** What a first-time visitor sees before choosing anything. */
+  default: string;
+  items: LanguageSetting[];
 }
 
 export interface AppearanceSettings {
@@ -71,6 +92,7 @@ export interface AppearanceSettings {
     iconSize: number;
     items: NavItemSetting[];
   };
+  languages: LanguageSettings;
 }
 
 export const defaultAppearance: AppearanceSettings = {
@@ -141,5 +163,16 @@ export const defaultAppearance: AppearanceSettings = {
       { id: "videos", label: "वीडियो", href: "/videos", icon: "video", visible: true },
       { id: "watch", label: "वॉच", href: "/watch", icon: "watch", visible: true },
     ],
+  },
+  languages: {
+    source: SOURCE_LANGUAGE,
+    default: DEFAULT_LANGUAGE,
+    items: siteLanguages.map((language) => ({
+      code: language.code,
+      label: language.label,
+      englishLabel: language.englishLabel,
+      rtl: language.rtl ?? false,
+      enabled: true,
+    })),
   },
 };

@@ -10,7 +10,7 @@ import { useLanguage } from "@/components/i18n/language-provider";
  *  rest of the page — the same deal the public site gets. The preference is
  *  shared, so switching in either place moves the whole product. */
 export function useAdminLang() {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, options } = useLanguage();
   const t = useCallback((hi: string, en: string) => (language === "en" ? en : hi), [language]);
-  return { t, language, setLanguage };
+  return { t, language, setLanguage, options };
 }

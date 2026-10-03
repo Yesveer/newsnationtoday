@@ -38,7 +38,6 @@ import { useAdminAuth, useAdminSession } from "@/components/admin/admin-session"
 import { useAdminLang } from "@/components/admin/use-admin-lang";
 import { RoleBadge } from "@/components/admin/role-badge";
 import { AdminCommandMenu } from "@/components/admin/admin-command-menu";
-import { findLanguage, siteLanguages } from "@/config/languages.config";
 
 const segmentLabels: Record<string, [hi: string, en: string]> = {
   admin: ["एडमिन", "Admin"],
@@ -62,8 +61,8 @@ export function AdminHeader() {
   const { user, role } = useAdminSession();
   const { signOut } = useAdminAuth();
   const router = useRouter();
-  const { t, language, setLanguage } = useAdminLang();
-  const currentLanguage = findLanguage(language) ?? siteLanguages[0];
+  const { t, language, setLanguage, options } = useAdminLang();
+  const currentLanguage = options.find((option) => option.code === language) ?? options[0];
   const { resolvedTheme, setTheme } = useTheme();
 
   const segments = pathname.split("/").filter(Boolean);
@@ -128,7 +127,7 @@ export function AdminHeader() {
             <Button variant="ghost" size="sm" className="gap-1.5 px-2" aria-label={t("भाषा बदलें", "Change language")}>
               <IconLanguage className="size-4.5" stroke={1.8} />
               <span className="notranslate hidden text-[12.5px] font-medium sm:inline" translate="no">
-                {currentLanguage.label}
+                {currentLanguage?.label}
               </span>
             </Button>
           </DropdownMenuTrigger>
@@ -139,7 +138,7 @@ export function AdminHeader() {
               <IconLanguage className="size-3.5" /> {t("भाषा", "Language")}
             </DropdownMenuLabel>
             <DropdownMenuRadioGroup value={language} onValueChange={(value) => setLanguage(value)}>
-              {siteLanguages.map((option) => (
+              {options.map((option) => (
                 <DropdownMenuRadioItem key={option.code} value={option.code} className="text-[13px]">
                   <span className="notranslate flex flex-1 items-center gap-2" translate="no">
                     <span className="w-6 text-[10px] font-bold tracking-wide uppercase opacity-60">

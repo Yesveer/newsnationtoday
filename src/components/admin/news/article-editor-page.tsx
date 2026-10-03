@@ -7,11 +7,9 @@ import { ArticleEditor } from "@/components/admin/news/article-editor";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/admin";
-import { mediaItems } from "@/data/admin/media";
 import type { NewsItem } from "@/types/admin";
 
-/** Loads one story from the API and hands it to the editor. Media is still the
- *  built-in sample library — uploads come with the storage backend. */
+/** Loads one story from the API and hands it to the editor. */
 export function ArticleEditorPage({ id }: { id: string }) {
   const { t } = useAdminLang();
   const [item, setItem] = useState<NewsItem | null>(null);
@@ -67,5 +65,5 @@ export function ArticleEditorPage({ id }: { id: string }) {
     );
   }
 
-  return <ArticleEditor item={item} media={mediaItems} onSaved={setItem} />;
+  return <ArticleEditor item={item} onSaved={setItem} />;
 }

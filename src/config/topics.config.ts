@@ -5,6 +5,8 @@ export interface Topic {
   /** Short visual marker shown on the tile — a state code, a flag emoji, or a sport emoji. */
   badge: string;
   color: string;
+  /** Custom logo set in the admin portal; wins over the built-in icon. */
+  iconUrl?: string;
 }
 
 /** Indian states + the most newsworthy UTs. */

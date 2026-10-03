@@ -6,6 +6,7 @@ import { NewsFeed } from "@/components/home/news-feed";
 import { TopicExplorer } from "@/components/topics/topic-explorer";
 import { CategoryHeading } from "@/components/topics/category-heading";
 import { categoryTopics } from "@/config/topics.config";
+import { getTopicsForCategory } from "@/lib/data/get-topics";
 import type { TranslationKey } from "@/lib/i18n/dictionary";
 
 export async function generateMetadata({
@@ -33,18 +34,17 @@ export default async function CategoryPage({
   if (!category) notFound();
 
   const articles = await getArticlesByCategory(categorySlug);
-  const hub = categoryTopics[categorySlug];
+  // The tiles come from the database; the static config only still supplies
+  // the search placeholder wording for the special hubs.
+  const topics = await getTopicsForCategory(categorySlug);
+  const searchKey = (categoryTopics[categorySlug]?.searchKey ?? "topic.search") as TranslationKey;
 
   return (
     <div className="flex flex-col gap-5">
       <CategoryHeading name={category.name} nameEn={category.nameEn ?? category.name} />
 
-      {hub ? (
-        <TopicExplorer
-          articles={articles}
-          topics={hub.topics}
-          searchKey={hub.searchKey as TranslationKey}
-        />
+      {topics.length > 0 ? (
+        <TopicExplorer articles={articles} topics={topics} searchKey={searchKey} />
       ) : articles.length === 0 ? (
         <p className="text-text-muted">इस श्रेणी में फ़िलहाल कोई खबर उपलब्ध नहीं है।</p>
       ) : (

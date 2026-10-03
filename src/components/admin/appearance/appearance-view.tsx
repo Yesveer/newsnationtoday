@@ -8,6 +8,7 @@ import {
   IconArrowUp,
   IconDeviceFloppy,
   IconDeviceMobile,
+  IconLanguage,
   IconEye,
   IconLayoutSidebar,
   IconPalette,
@@ -26,11 +27,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PageHeader } from "@/components/admin/page-header";
 import { AppearancePreview } from "@/components/admin/appearance/appearance-preview";
+import { LanguageSettingsPanel } from "@/components/admin/appearance/language-settings";
 import { defaultAppearance, type NavItemSetting } from "@/config/appearance.config";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/admin";
+import { useRef } from "react";
 import type { SiteSettings } from "@/lib/data/get-site-config";
 
 const accentSwatches = ["#FF5C00", "#E23744", "#7C3AED", "#0EA5E9", "#16A34A", "#F59E0B", "#EC4899"];
@@ -60,6 +63,8 @@ export function AppearanceView() {
   // This is the live site configuration from the database — saving it changes
   // what every reader sees.
   const [settings, setSettings] = useState<SiteSettings>(defaultAppearance);
+  const logoInput = useRef<HTMLInputElement>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +97,24 @@ export function AppearanceView() {
       active = false;
     };
   }, [fetchConfig]);
+
+  // The logo goes to the portal storage profile, same as category icons.
+  const uploadLogo = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const asset = await api.uploadMedia(file, "portal");
+      update("brand", { logoUrl: asset.url });
+      toast.success(t("लोगो अपलोड हो गया", "Logo uploaded"), {
+        description: t("सेव करना न भूलें।", "Remember to save."),
+      });
+    } catch (apiError) {
+      toast.error(
+        apiError instanceof ApiError ? apiError.message : t("अपलोड नहीं हुआ", "The upload did not go through"),
+      );
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -203,6 +226,9 @@ export function AppearanceView() {
             <TabsTrigger value="mobile" className="rounded-md text-[13px]">
               <IconDeviceMobile className="size-3.5" /> {t("मोबाइल", "Mobile")}
             </TabsTrigger>
+            <TabsTrigger value="languages" className="rounded-md text-[13px]">
+              <IconLanguage className="size-3.5" /> {t("भाषा", "Languages")}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="brand" className="mt-3 flex flex-col gap-3">
@@ -217,16 +243,27 @@ export function AppearanceView() {
                     <Image src={settings.brand.logoUrl} alt="logo" fill className="object-contain p-1.5" sizes="128px" />
                   </span>
                   <div className="flex flex-col gap-2">
+                    <input
+                      ref={logoInput}
+                      type="file"
+                      accept="image/png,image/svg+xml,image/webp"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) void uploadLogo(file);
+                        event.target.value = "";
+                      }}
+                    />
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        toast.success(t("लोगो अपलोडर", "Logo uploader"), {
-                          description: t("स्टोरेज बैकएंड के साथ जुड़ेगा।", "Wires up with the storage backend."),
-                        })
-                      }
+                      disabled={uploadingLogo}
+                      onClick={() => logoInput.current?.click()}
                     >
-                      <IconPhotoUp className="size-4" /> {t("नया लोगो अपलोड करें", "Upload a new logo")}
+                      <IconPhotoUp className="size-4" />
+                      {uploadingLogo
+                        ? t("अपलोड हो रहा है…", "Uploading…")
+                        : t("नया लोगो अपलोड करें", "Upload a new logo")}
                     </Button>
                     <p className="text-[11px] text-text-muted">
                       {t("PNG या SVG · पारदर्शी बैकग्राउंड · कम से कम 900×300", "PNG or SVG · transparent background · at least 900×300")}
@@ -623,6 +660,13 @@ export function AppearanceView() {
                 </Row>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="languages" className="mt-3">
+            <LanguageSettingsPanel
+              value={settings.languages}
+              onChange={(languages) => setSettings((current) => ({ ...current, languages }))}
+            />
           </TabsContent>
 
           <TabsContent value="mobile" className="mt-3 flex flex-col gap-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown, Search, X } from "lucide-react";
 import { NewsFeed } from "@/components/home/news-feed";
@@ -21,6 +22,20 @@ import { cn } from "@/lib/cn";
 function Badge({ topic, size = "md" }: { topic: Topic; size?: "sm" | "md" }) {
   const box = size === "md" ? "size-11" : "size-8";
   const mapPath = stateMapPaths[topic.slug];
+
+  // A logo uploaded in the admin portal wins over everything built in.
+  if (topic.iconUrl) {
+    return (
+      <Image
+        src={topic.iconUrl}
+        alt=""
+        width={size === "md" ? 44 : 32}
+        height={size === "md" ? 44 : 32}
+        className={cn(box, "shrink-0 object-contain")}
+        unoptimized
+      />
+    );
+  }
 
   if (mapPath) {
     return (

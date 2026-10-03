@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/components/i18n/language-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/config/site";
 import { translateBootstrapScript } from "@/lib/i18n/google-translate";
+import { getSiteSettings } from "@/lib/data/get-site-config";
 import "./globals.css";
 
 const hind = Hind({
@@ -42,7 +43,9 @@ export const viewport: Viewport = {
 /** Only the shared shell lives here: fonts, theme, language, toasts. The
  *  reader-facing chrome (masthead, hero, rails) is in `(site)/layout.tsx`
  *  and the newsroom chrome in `admin/layout.tsx`, so the two never mix. */
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { languages } = await getSiteSettings();
+
   return (
     <html lang="hi" suppressHydrationWarning className={`${hind.variable} ${inter.variable}`}>
       <body className="antialiased">
@@ -50,10 +53,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             cookie so a page arrives already translated instead of flipping.
             Next hoists a beforeInteractive script into the document head. */}
         <Script id="translate-bootstrap" strategy="beforeInteractive">
-          {translateBootstrapScript}
+          {translateBootstrapScript(
+            languages.default,
+            languages.source,
+            languages.items.filter((item) => item.enabled !== false).map((item) => item.code),
+          )}
         </Script>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <LanguageProvider>
+          <LanguageProvider
+            options={languages.items}
+            defaultLanguage={languages.default}
+            sourceLanguage={languages.source}
+          >
             {children}
             <Toaster position="top-right" richColors />
           </LanguageProvider>

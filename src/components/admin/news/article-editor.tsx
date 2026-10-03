@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -57,8 +57,7 @@ import { useAdminLang } from "@/components/admin/use-admin-lang";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/admin";
 import { categoriesConfig } from "@/config/categories.config";
-import { categoryTopics } from "@/config/topics.config";
-import type { MediaItem, NewsItem } from "@/types/admin";
+import type { NewsItem } from "@/types/admin";
 import { cn } from "@/lib/cn";
 
 const makeEditorSchema = (t: (hi: string, en: string) => string) =>
@@ -134,11 +133,9 @@ function slugify(value: string): string {
 
 export function ArticleEditor({
   item,
-  media,
   onSaved,
 }: {
   item?: NewsItem;
-  media: MediaItem[];
   /** Lets the page refresh its copy after a save or a workflow change. */
   onSaved?: (item: NewsItem) => void;
 }) {
@@ -176,7 +173,19 @@ export function ArticleEditor({
   const categorySlug = form.watch("categorySlug");
   const coverImageUrl = form.watch("coverImageUrl");
   const title = form.watch("title");
-  const topicOptions = categoryTopics[categorySlug]?.topics ?? [];
+  // Topics are per category and live in the database, so the list refreshes
+  // whenever the category changes.
+  const [topicOptions, setTopicOptions] = useState<api.AdminTopic[]>([]);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const listed = await api.listTopics(categorySlug).catch(() => ({ topics: [], counts: {} }));
+      if (active) setTopicOptions(listed.topics.filter((topic) => topic.visible));
+    })();
+    return () => {
+      active = false;
+    };
+  }, [categorySlug]);
 
   /** Saves the form, then optionally moves the story along the workflow.
    *
@@ -880,7 +889,7 @@ export function ArticleEditor({
         <MediaPickerDialog
           open={pickerOpen}
           onOpenChange={setPickerOpen}
-          media={media}
+          kind="news"
           onSelect={(selected) => {
             form.setValue("coverImageUrl", selected.url, {
               shouldValidate: true,

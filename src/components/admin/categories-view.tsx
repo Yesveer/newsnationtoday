@@ -20,6 +20,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/admin/page-header";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
+import { CategoryIconPicker } from "@/components/admin/category-icon-picker";
 import { categoryTopics } from "@/config/topics.config";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/client";
@@ -35,7 +36,7 @@ export function CategoriesView({ counts }: { counts: Record<string, number> }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", nameEn: "", slug: "", color: "#FF5C00" });
+  const [form, setForm] = useState({ name: "", nameEn: "", slug: "", color: "#FF5C00", iconUrl: "" });
   const [saving, setSaving] = useState(false);
 
   const fetchRows = useCallback(async () => {
@@ -111,11 +112,12 @@ export function CategoriesView({ counts }: { counts: Record<string, number> }) {
         nameEn: form.nameEn,
         slug: form.slug,
         color: form.color,
+        iconUrl: form.iconUrl,
         isNew: false,
         visible: true,
       });
       setOpen(false);
-      setForm({ name: "", nameEn: "", slug: "", color: "#FF5C00" });
+      setForm({ name: "", nameEn: "", slug: "", color: "#FF5C00", iconUrl: "" });
       toast.success(t("कैटेगरी जोड़ दी गई", "Category added"));
       await reload();
     } catch (apiError) {
@@ -187,6 +189,23 @@ export function CategoriesView({ counts }: { counts: Record<string, number> }) {
                   />
                 </div>
                 <div className="space-y-1.5">
+                  <Label>{t("लोगो", "Logo")}</Label>
+                  <div className="flex items-center gap-3">
+                    <CategoryIconPicker
+                      iconUrl={form.iconUrl}
+                      color={form.color}
+                      label={form.name || t("नई कैटेगरी", "New category")}
+                      onChange={(iconUrl) => setForm({ ...form, iconUrl })}
+                    />
+                    <p className="text-[11.5px] text-text-muted">
+                      {t(
+                        "लोगो पर क्लिक करके लिंक दीजिए या इमेज अपलोड कीजिए।",
+                        "Click the logo to paste a link or upload an image.",
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
                   <Label htmlFor="cat-color">{t("रंग", "Colour")}</Label>
                   <Input
                     id="cat-color"
@@ -221,6 +240,7 @@ export function CategoriesView({ counts }: { counts: Record<string, number> }) {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-16">{t("क्रम", "Order")}</TableHead>
+                <TableHead className="w-16">{t("लोगो", "Logo")}</TableHead>
                 <TableHead className="min-w-[200px]">{t("नाम", "Name")}</TableHead>
                 <TableHead className="hidden md:table-cell">{t("स्लग", "Slug")}</TableHead>
                 <TableHead className="hidden lg:table-cell">{t("रंग", "Colour")}</TableHead>
@@ -234,7 +254,7 @@ export function CategoriesView({ counts }: { counts: Record<string, number> }) {
               {loading
                 ? Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`} className="hover:bg-transparent">
-                      <TableCell colSpan={8}>
+                      <TableCell colSpan={9}>
                         <Skeleton className="h-9 w-full" />
                       </TableCell>
                     </TableRow>
@@ -264,6 +284,14 @@ export function CategoriesView({ counts }: { counts: Record<string, number> }) {
                         <IconArrowDown className="size-3.5" />
                       </Button>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <CategoryIconPicker
+                      iconUrl={row.iconUrl}
+                      color={row.color}
+                      label={row.name}
+                      onChange={(iconUrl) => void patch(row, { iconUrl })}
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

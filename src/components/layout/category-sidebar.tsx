@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -123,7 +124,19 @@ export function CategoryLinks({
             >
               {sidebar.showCategoryIcons ? (
                 <IconTile color={category.color ?? "#FF5C00"}>
-                  <Icon className="size-[19px]" stroke={1.7} />
+                  {/* A logo set in the admin portal wins over the built-in icon. */}
+                  {"iconUrl" in category && category.iconUrl ? (
+                    <Image
+                      src={category.iconUrl}
+                      alt=""
+                      width={19}
+                      height={19}
+                      className="size-[19px] object-contain"
+                      unoptimized
+                    />
+                  ) : (
+                    <Icon className="size-[19px]" stroke={1.7} />
+                  )}
                 </IconTile>
               ) : null}
               <span className="truncate">{language === "en" ? category.nameEn : category.name}</span>
