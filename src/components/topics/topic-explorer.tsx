@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown, Search, X } from "lucide-react";
 import { NewsFeed } from "@/components/home/news-feed";

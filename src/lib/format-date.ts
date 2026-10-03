@@ -21,3 +21,18 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
 export function formatAbsoluteDate(iso: string): string {
   return absoluteFormatter.format(new Date(iso));
 }
+
+const dateTimeFormatter = new Intl.DateTimeFormat("hi-IN", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** "3 अक्तूबर 2026, 04:21 pm" — the exact stamp under a story. */
+export function formatDateTimeLong(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return dateTimeFormatter.format(date);
+}

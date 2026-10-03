@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import { toast } from "sonner";
 import { IconCloudUpload, IconSearch } from "@tabler/icons-react";
 import {

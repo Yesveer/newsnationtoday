@@ -11,6 +11,13 @@ export interface GalleryImage {
   caption?: string;
 }
 
+/** A link to this story on a social platform, entered by the newsroom. */
+export interface ArticleSocialLink {
+  platform: string;
+  url: string;
+  label?: string;
+}
+
 export interface Article {
   id: string;
   slug: string;
@@ -23,6 +30,10 @@ export interface Article {
   gallery?: GalleryImage[];
   categoryId: string;
   authorId: string;
+  /** The desk credits a reader sees: who filed it, who checked it, who ran it. */
+  reviewedByName?: string;
+  publishedByName?: string;
+  socialLinks?: ArticleSocialLink[];
   tags: string[];
   status: "draft" | "published" | "archived";
   isFeatured: boolean;

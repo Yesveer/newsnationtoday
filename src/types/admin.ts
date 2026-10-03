@@ -38,7 +38,8 @@ export interface AdminUser {
   desk?: string;
   phone?: string;
   joinedAt: string;
-  lastActiveAt: string;
+  /** Absent until the person signs in for the first time. */
+  lastActiveAt?: string;
   storiesCount: number;
 
   // Everything below is optional — only name, email and role are required.
@@ -81,11 +82,40 @@ export interface ReviewComment {
 export interface StatusEvent {
   id: string;
   status: NewsStatus;
+  /** Absent on events recorded before actions were attributed to an account. */
+  byId?: string;
   byName: string;
   byRole: UserRole;
   at: string;
   note?: string;
 }
+
+/** A named account referenced from a story. */
+export interface Person {
+  id: string;
+  name: string;
+  role?: UserRole;
+}
+
+/** A link to this story on a social platform, entered by the newsroom. */
+export interface SocialLink {
+  platform: SocialPlatform;
+  url: string;
+  label?: string;
+}
+
+export type SocialPlatform =
+  | "facebook"
+  | "x"
+  | "instagram"
+  | "youtube"
+  | "whatsapp"
+  | "telegram"
+  | "linkedin"
+  | "threads"
+  | "koo"
+  | "sharechat"
+  | "other";
 
 export interface NewsItem {
   id: string;
@@ -100,6 +130,14 @@ export interface NewsItem {
   status: NewsStatus;
   authorId: string;
   authorName: string;
+  /** Who the story is addressed to. Any admin may still act on it. */
+  reviewers?: Person[];
+  /** Who actually signed off — being asked is not the same as having done it. */
+  reviewedBy?: Person;
+  reviewedAt?: string;
+  /** Whoever actually pressed publish. */
+  publishedByName?: string;
+  socialLinks?: SocialLink[];
   tags: string[];
   isBreaking: boolean;
   isFeatured: boolean;

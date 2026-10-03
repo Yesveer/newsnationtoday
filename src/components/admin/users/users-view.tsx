@@ -87,7 +87,7 @@ const allRoles: UserRole[] = ["administrator", "admin", "reporter"];
 /** Everything here talks to the Go API. Only an administrator can reach this
  *  screen, and the API enforces that again on every call. */
 export function UsersView() {
-  const { t } = useAdminLang();
+  const { t, language } = useAdminLang();
   const { user: currentUser } = useAdminSession();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -366,10 +366,14 @@ export function UsersView() {
                           >
                             {t(status.label, status.labelEn)}
                           </span>
-                          <p className="mt-0.5 text-[11px] text-text-muted">{formatRelative(user.lastActiveAt)}</p>
+                          <p className="mt-0.5 text-[11px] text-text-muted">
+                            {user.lastActiveAt
+                              ? formatRelative(user.lastActiveAt, language)
+                              : t("कभी लॉगिन नहीं किया", "Never signed in")}
+                          </p>
                         </TableCell>
                         <TableCell className="hidden xl:table-cell text-[12px] whitespace-nowrap text-text-muted">
-                          {formatDate(user.joinedAt)}
+                          {formatDate(user.joinedAt, language)}
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>

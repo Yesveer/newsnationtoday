@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { Play } from "lucide-react";
 import { getAllArticles } from "@/lib/data/get-articles";

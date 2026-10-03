@@ -45,7 +45,7 @@ const areas = ["auth", "user", "news", "media", "appearance", "settings", "categ
 const PAGE_SIZE = 50;
 
 export function AuditLogsView() {
-  const { t } = useAdminLang();
+  const { t, language } = useAdminLang();
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [totals, setTotals] = useState({ all: 0, warning: 0, critical: 0 });
@@ -222,8 +222,8 @@ export function AuditLogsView() {
                     return (
                       <TableRow key={log.id}>
                         <TableCell className="text-[12px] whitespace-nowrap text-text-muted">
-                          <p className="text-text">{formatRelative(log.at, new Date())}</p>
-                          <p>{formatDateTime(log.at)}</p>
+                          <p className="text-text">{formatRelative(log.at, language)}</p>
+                          <p>{formatDateTime(log.at, language)}</p>
                         </TableCell>
                         <TableCell>
                           <p className="text-[13px] font-medium text-text">{log.actorName}</p>

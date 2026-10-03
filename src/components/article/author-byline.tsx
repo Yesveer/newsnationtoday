@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import type { Author } from "@/types/author";
 
 /** Compact inline byline — Bhaskar shows this only for bylined/ground-report pieces, not every article. */

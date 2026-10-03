@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -83,7 +83,7 @@ export function NewsTableView({
   onlyVideos?: boolean;
 }) {
   const { user, role, can } = useAdminSession();
-  const { t } = useAdminLang();
+  const { t, language } = useAdminLang();
   const [status, setStatus] = useState<NewsStatus | "all">("all");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -409,10 +409,10 @@ export function NewsTableView({
                       <StatusBadge status={item.status} />
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-right text-[12.5px] tabular-nums text-text-muted">
-                      {item.status === "published" ? formatCompact(item.views) : "—"}
+                      {item.status === "published" ? formatCompact(item.views, language) : "—"}
                     </TableCell>
                     <TableCell className="hidden xl:table-cell text-[12px] whitespace-nowrap text-text-muted">
-                      {formatRelative(item.updatedAt)}
+                      {formatRelative(item.updatedAt, language)}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import { toast } from "sonner";
 import {
   IconAlertTriangle,
@@ -37,7 +37,7 @@ function formatBytes(bytes: number): string {
  *  separately because they live in different storage profiles. */
 export function MediaLibraryView() {
   const { can } = useAdminSession();
-  const { t } = useAdminLang();
+  const { t, language } = useAdminLang();
 
   const [kind, setKind] = useState<api.AssetKind>("portal");
   const [assets, setAssets] = useState<api.MediaAsset[]>([]);
@@ -297,7 +297,7 @@ export function MediaLibraryView() {
                   {formatBytes(asset.bytes)}
                 </p>
                 <p className="truncate text-[11px] text-text-muted">
-                  {asset.uploadedByName} · {formatRelative(asset.createdAt, new Date())}
+                  {asset.uploadedByName} · {formatRelative(asset.createdAt, language)}
                 </p>
               </CardContent>
             </Card>

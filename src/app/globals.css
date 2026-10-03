@@ -156,11 +156,19 @@ html.dark:has([data-admin-theme]) {
 }
 
 /* Google's website translator. We drive it from our own language menu, so its
-   banner, tooltip and the body offset it injects are all suppressed. */
+   banner, tooltip, spinner and the body offset it injects are all suppressed.
+
+   The spinner matters: it is appended to <body>, outside anything React owns,
+   and it stays on screen turning in the top-left corner if the page navigates
+   away mid-translation. Its class names are obfuscated and share one prefix,
+   which is the only handle there is — the widget also removes the node, and
+   this rule makes sure it is never painted even for a moment. */
 .goog-te-banner-frame,
 .goog-te-balloon-frame,
+.goog-te-spinner-pos,
 #goog-gt-tt,
-.skiptranslate iframe {
+.skiptranslate iframe,
+[class*="VIpgJd-ZVi9od-aZ2wEe"] {
   display: none !important;
 }
 
@@ -348,4 +356,145 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Story typography.
+
+   One set of rules for both sides: the admin editor renders inside
+   `.news-prose`, and so does the published article. What a reporter lays out
+   is exactly what a reader sees — no second stylesheet to drift out of sync.
+   --------------------------------------------------------------------------- */
+.news-prose {
+  font-size: 17px;
+  line-height: 1.85;
+  color: var(--text);
+}
+
+.news-prose > * + * {
+  margin-top: 1em;
+}
+
+.news-prose h2,
+.news-prose h3,
+.news-prose h4 {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+  margin-top: 1.6em;
+}
+
+.news-prose h2 {
+  font-size: 1.5em;
+}
+.news-prose h3 {
+  font-size: 1.25em;
+}
+.news-prose h4 {
+  font-size: 1.08em;
+}
+
+.news-prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.news-prose strong {
+  font-weight: 700;
+}
+
+.news-prose ul,
+.news-prose ol {
+  padding-left: 1.4em;
+}
+.news-prose ul {
+  list-style: disc;
+}
+.news-prose ol {
+  list-style: decimal;
+}
+.news-prose li + li {
+  margin-top: 0.35em;
+}
+.news-prose li > ul,
+.news-prose li > ol {
+  margin-top: 0.35em;
+}
+
+.news-prose blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.news-prose code {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.88em;
+  background: var(--surface-muted);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+.news-prose pre {
+  background: var(--surface-muted);
+  border-radius: 8px;
+  padding: 0.9em 1em;
+  overflow-x: auto;
+}
+.news-prose pre code {
+  background: none;
+  padding: 0;
+}
+
+.news-prose img {
+  border-radius: 10px;
+  max-width: 100%;
+  height: auto;
+}
+
+.news-prose hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1.8em 0;
+}
+
+.news-prose mark {
+  border-radius: 3px;
+  padding: 0.05em 0.2em;
+  color: #111;
+}
+
+.news-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.94em;
+}
+.news-prose th,
+.news-prose td {
+  border: 1px solid var(--border);
+  padding: 0.5em 0.7em;
+  text-align: start;
+}
+.news-prose th {
+  background: var(--surface-muted);
+  font-weight: 600;
+}
+
+/* The editor's empty state — a placeholder that is part of the document would
+   end up in the saved HTML, so it is drawn with CSS instead. */
+.news-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.news-prose .ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 10px;
 }

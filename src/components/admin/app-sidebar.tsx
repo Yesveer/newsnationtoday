@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconArrowLeft, IconCircleFilled } from "@tabler/icons-react";

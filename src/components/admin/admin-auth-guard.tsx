@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import { useAdminAuth } from "@/components/admin/admin-session";
 import { siteConfig } from "@/config/site";
 

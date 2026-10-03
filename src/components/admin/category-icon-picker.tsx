@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import { toast } from "sonner";
 import { IconPhoto, IconTrash, IconUpload } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";

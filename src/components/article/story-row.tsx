@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Play } from "lucide-react";
-import { formatRelativeTime } from "@/lib/format-date";
+import { TimeAgo } from "@/components/article/time-ago";
 import { fadeUp } from "@/lib/motion-variants";
 import { useLanguage } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/cn";
@@ -53,7 +53,7 @@ export function StoryRow({ article, className }: { article: ArticleWithRelations
             {article.isBreaking && (
               <span className="rounded bg-live px-1.5 py-0.5 text-[10px] font-bold text-live-foreground">LIVE</span>
             )}
-            <span className="text-text-muted">{formatRelativeTime(article.publishedAt)}</span>
+            <TimeAgo iso={article.publishedAt} className="text-text-muted" />
           </div>
 
           <h3 className="line-clamp-2 text-lg leading-snug font-bold text-text transition-colors group-hover:text-accent sm:text-xl">

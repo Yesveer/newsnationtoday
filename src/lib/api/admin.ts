@@ -53,7 +53,7 @@ export function toAdminUser(user: ApiUser): AdminUser {
     desk: user.desk,
     phone: user.phone,
     joinedAt: user.createdAt,
-    lastActiveAt: user.lastActiveAt ?? user.createdAt,
+    lastActiveAt: user.lastActiveAt,
     storiesCount: user.storiesCount,
 
     altPhone: user.altPhone,
@@ -281,7 +281,7 @@ export async function listAuditLogs(params: ListAuditParams = {}): Promise<Paged
 
 /** The newsroom types live in `@/types/admin`; the API speaks the same shape,
  *  so there is one definition, not two that drift apart. */
-export type { NewsItem, NewsStatus } from "@/types/admin";
+export type { NewsItem, NewsStatus, Person, SocialLink, SocialPlatform } from "@/types/admin";
 
 export interface NewsInput {
   title: string;
@@ -297,7 +297,84 @@ export interface NewsInput {
   isBreaking: boolean;
   isFeatured: boolean;
   scheduledFor?: string;
+  /** Empty means "no one in particular" — the whole desk is notified. */
+  reviewerIds?: string[];
+  socialLinks?: { platform: string; url: string; label?: string }[];
   seo: { metaTitle?: string; metaDescription?: string; keywords?: string };
+}
+
+export interface Reviewer {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  desk?: string;
+  avatarUrl?: string;
+}
+
+/** Everyone who is allowed to review a story — the picker in the editor. */
+export async function listReviewers(): Promise<Reviewer[]> {
+  const data = await apiFetch<{ reviewers: Reviewer[] }>("/news/reviewers");
+  return data.reviewers ?? [];
+}
+
+/** One person's desk record, counted from the stories themselves. */
+export interface ReviewActivity {
+  userId: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatarUrl?: string;
+  approved: number;
+  rejected: number;
+  changesRequested: number;
+  scheduled: number;
+  archived: number;
+  comments: number;
+  /** Stories sitting in their queue right now. */
+  pending: number;
+  /** Stories they filed themselves. */
+  authored: number;
+  /** Every decision added up. */
+  total: number;
+}
+
+export type ReviewTab = "pending" | "mine" | "changes" | "completed" | "rejected" | "all";
+
+export interface ReviewQueue {
+  items: NewsItem[];
+  counts: Record<ReviewTab, number>;
+  total: number;
+}
+
+/** One call backs the whole review screen: the tab asked for, plus the number
+ *  behind every other tab. */
+export async function listReviewQueue(params: {
+  tab: ReviewTab;
+  search?: string;
+  decidedBy?: string;
+  page?: number;
+  limit?: number;
+} ): Promise<ReviewQueue> {
+  // "mine" is the pending list narrowed to the signed-in reviewer.
+  const { tab, ...rest } = params;
+  const data = await apiFetch<{
+    news: NewsItem[];
+    counts: Record<ReviewTab, number>;
+    meta: { total: number };
+  }>(
+    `/news/review-queue${toQuery({
+      ...rest,
+      tab: tab === "mine" ? "pending" : tab,
+      mine: tab === "mine" ? "true" : undefined,
+    })}`,
+  );
+  return { items: data.news ?? [], counts: data.counts, total: data.meta.total };
+}
+
+export async function listReviewActivity(): Promise<ReviewActivity[]> {
+  const data = await apiFetch<{ activity: ReviewActivity[] }>("/news/review-activity");
+  return data.activity ?? [];
 }
 
 export interface ListNewsParams {
@@ -372,6 +449,17 @@ export interface NewsStats {
   viewsByCategory: { category: string; views: number }[];
   activeUsers: number;
   reporters: number;
+  /** Last 14 days, real. Views are counted from the day tracking started;
+   *  the story count is reconstructed from the stories themselves. */
+  traffic: TrafficPoint[];
+  /** The first day views were recorded — empty if none yet. */
+  trafficSince: string;
+}
+
+export interface TrafficPoint {
+  date: string;
+  views: number;
+  stories: number;
 }
 
 export async function getNewsStats(): Promise<NewsStats> {

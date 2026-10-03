@@ -8,9 +8,8 @@ import * as api from "@/lib/api/admin";
 import type { DashboardStats } from "@/lib/data/admin/get-admin-data";
 import type { AdminUser, AuditLog, NewsItem } from "@/types/admin";
 
-/** Loads everything the dashboard shows. Counts, views and the story lists are
- *  real; only the day-by-day traffic line is still sample data, because the API
- *  does not record views per day yet. */
+/** Loads everything the dashboard shows. Every number here comes from the
+ *  database — counts, views, the traffic line and the desk scoreboard. */
 export function DashboardData() {
   const { role, can } = useAdminSession();
   const [loading, setLoading] = useState(true);
@@ -21,15 +20,19 @@ export function DashboardData() {
     recentNews: NewsItem[];
     auditLogs: AuditLog[];
     users: AdminUser[];
+    traffic: api.TrafficPoint[];
+    trafficSince: string;
+    reviewActivity: api.ReviewActivity[];
   } | null>(null);
 
   const fetchAll = useCallback(async () => {
-    const [statsResult, recent, queue, logs, users] = await Promise.all([
+    const [statsResult, recent, queue, logs, users, activity] = await Promise.all([
       api.getNewsStats().catch(() => null),
       api.listNews({ limit: 40 }).catch(() => null),
       can("news.review") ? api.listNews({ status: "in_review", limit: 10 }).catch(() => null) : null,
       role === "administrator" ? api.listAuditLogs({ limit: 8 }).catch(() => null) : null,
       role === "administrator" ? api.listUsers({ limit: 10 }).catch(() => null) : null,
+      can("news.review") ? api.listReviewActivity().catch(() => null) : null,
     ]);
 
     const counts = statsResult?.counts ?? {};
@@ -60,6 +63,9 @@ export function DashboardData() {
       recentNews: recentItems,
       auditLogs: logs?.items ?? [],
       users: users?.items ?? [],
+      traffic: statsResult?.traffic ?? [],
+      trafficSince: statsResult?.trafficSince ?? "",
+      reviewActivity: activity ?? [],
     };
   }, [role, can]);
 
@@ -96,7 +102,9 @@ export function DashboardData() {
   return (
     <DashboardView
       stats={data.stats}
-      traffic={sampleTraffic()}
+      traffic={data.traffic}
+      trafficSince={data.trafficSince}
+      reviewActivity={data.reviewActivity}
       breakdown={data.breakdown}
       reviewQueue={data.reviewQueue}
       recentNews={data.recentNews}
@@ -104,17 +112,4 @@ export function DashboardData() {
       users={data.users}
     />
   );
-}
-
-/** Placeholder trend line until the API records views per day. */
-function sampleTraffic() {
-  return Array.from({ length: 14 }, (_, index) => {
-    const day = new Date();
-    day.setDate(day.getDate() - (13 - index));
-    return {
-      date: day.toISOString().slice(0, 10),
-      views: Math.round(42000 + Math.sin(index / 2) * 9000 + index * 1450),
-      stories: 8 + ((index * 3) % 7),
-    };
-  });
 }

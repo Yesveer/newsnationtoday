@@ -1,9 +1,18 @@
-/** `bodyHtml` is authored in-house (mock data today, admin-authored in Phase 2) — never raw user input. */
+import { sanitizeStoryHtml } from "@/lib/sanitize-story";
+import { toStoryHtml } from "@/lib/story-html";
+
+/** The story itself.
+ *
+ *  `.news-prose` is the same class the admin editor writes inside, so the
+ *  layout a reporter built is the layout a reader gets. The HTML is sanitised
+ *  on the way out — see `sanitizeStoryHtml` for why that matters even for
+ *  in-house copy. */
 export function ArticleBody({ bodyHtml }: { bodyHtml: string }) {
+  const clean = sanitizeStoryHtml(toStoryHtml(bodyHtml));
+
   return (
-    <div
-      className="flex flex-col gap-4 text-[17px] leading-[1.85] text-text [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-text-muted"
-      dangerouslySetInnerHTML={{ __html: bodyHtml }}
-    />
+    // Deliberately translatable: a reader who picks another language wants
+    // the story in it. (The admin editor is the opposite — see its own note.)
+    <div className="news-prose" dangerouslySetInnerHTML={{ __html: clean }} />
   );
 }

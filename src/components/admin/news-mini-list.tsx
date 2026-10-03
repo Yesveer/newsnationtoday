@@ -1,13 +1,16 @@
 "use client";
 
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { IconEye, IconMessageCircle } from "@tabler/icons-react";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { useAdminLang } from "@/components/admin/use-admin-lang";
 import { formatCompact, formatRelative } from "@/lib/admin/format";
 import type { NewsItem } from "@/types/admin";
 
 export function NewsMiniList({ items, emptyText }: { items: NewsItem[]; emptyText: string }) {
+  const { language } = useAdminLang();
+
   if (items.length === 0) {
     return <p className="px-4 py-8 text-center text-sm text-text-muted">{emptyText}</p>;
   }
@@ -30,7 +33,7 @@ export function NewsMiniList({ items, emptyText }: { items: NewsItem[]; emptyTex
               <span className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
                 <StatusBadge status={item.status} />
                 {item.authorName}
-                <span>· {formatRelative(item.updatedAt)}</span>
+                <span>· {formatRelative(item.updatedAt, language)}</span>
                 {item.comments.length > 0 ? (
                   <span className="inline-flex items-center gap-0.5">
                     <IconMessageCircle className="size-3" /> {item.comments.length}
@@ -38,7 +41,7 @@ export function NewsMiniList({ items, emptyText }: { items: NewsItem[]; emptyTex
                 ) : null}
                 {item.status === "published" ? (
                   <span className="inline-flex items-center gap-0.5">
-                    <IconEye className="size-3" /> {formatCompact(item.views)}
+                    <IconEye className="size-3" /> {formatCompact(item.views, language)}
                   </span>
                 ) : null}
               </span>

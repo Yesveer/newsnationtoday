@@ -1,9 +1,9 @@
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { ShareRail } from "@/components/article/share-rail";
 import { AuthorByline } from "@/components/article/author-byline";
-import { formatRelativeTime } from "@/lib/format-date";
+import { TimeAgo } from "@/components/article/time-ago";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/cn";
 import type { ArticleWithRelations } from "@/types/article";
@@ -35,10 +35,16 @@ export function ArticleHeader({ article }: { article: ArticleWithRelations }) {
         {article.title}
       </h1>
 
+      {article.excerpt ? (
+        <p className="text-[17px] leading-relaxed text-text-muted">{article.excerpt}</p>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <AuthorByline author={article.author} />
-          <span className="text-sm text-text-muted">· {formatRelativeTime(article.publishedAt)}</span>
+          <span className="text-sm text-text-muted">
+            · <TimeAgo iso={article.publishedAt} />
+          </span>
         </div>
         <ShareRail url={url} title={article.title} />
       </div>

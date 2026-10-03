@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import { authors } from "@/data/authors";
 import { siteConfig } from "@/config/site";
 import { Reveal } from "@/components/motion/reveal";

@@ -19,7 +19,7 @@ import type { NewsItem } from "@/types/admin";
 /** A reporter can never delete a live story outright — they file a request and
  *  an admin decides here. Approving removes the story from the site. */
 export function RequestsView() {
-  const { t } = useAdminLang();
+  const { t, language } = useAdminLang();
   const [requests, setRequests] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +129,7 @@ export function RequestsView() {
                           {item.title}
                         </Link>
                         <p className="mt-0.5 text-[11px] text-text-muted">
-                          {formatRelative(item.updatedAt, new Date())}
+                          {formatRelative(item.updatedAt, language)}
                         </p>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-[13px] text-text">{item.authorName}</TableCell>

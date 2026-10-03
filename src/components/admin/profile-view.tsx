@@ -22,7 +22,7 @@ import { formatDate } from "@/lib/admin/format";
 
 export function ProfileView() {
   const { user, role } = useAdminSession();
-  const { t } = useAdminLang();
+  const { t, language } = useAdminLang();
   const { reload } = useAdminAuth();
   const [profile, setProfile] = useState({ name: user.name });
   // Everything optional lives in one object, shared with the admin's own form.
@@ -268,7 +268,7 @@ export function ProfileView() {
             <CardContent className="flex flex-col gap-2 pt-0 text-[12.5px] text-text-muted">
               <div className="flex justify-between">
                 <span>{t("जॉइन किया", "Joined")}</span>
-                <span className="text-text">{formatDate(user.joinedAt)}</span>
+                <span className="text-text">{formatDate(user.joinedAt, language)}</span>
               </div>
               <div className="flex justify-between">
                 <span>{t("कुल खबरें", "Stories")}</span>

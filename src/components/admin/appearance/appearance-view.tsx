@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import { toast } from "sonner";
 import {
   IconArrowDown,
@@ -733,8 +733,8 @@ export function AppearanceView() {
               <AppearancePreview settings={settings} />
               <p className="mt-3 text-[11.5px] text-text-muted">
                 {t(
-                  "यह सिर्फ़ प्रीव्यू है — “सेव करें” दबाने पर बैकएंड जुड़ने के बाद असली वेबसाइट पर लागू होगा।",
-                  "This is only a preview — pressing Save applies it to the live site once the backend is connected.",
+                  "यह प्रीव्यू है — “सेव करें” दबाते ही असली वेबसाइट पर लागू हो जाएगा।",
+                  "A preview — pressing Save applies it to the live site straight away.",
                 )}
               </p>
             </CardContent>

@@ -12,12 +12,36 @@ import { useAdminLang } from "@/components/admin/use-admin-lang";
 
 const chartConfig = {
   views: { label: "व्यूज़", color: "var(--accent)" },
-  stories: { label: "Stories", color: "var(--accent)" },
+  stories: { label: "खबरें", color: "var(--text-muted)" },
 } satisfies ChartConfig;
 
-export function TrafficChart({ data }: { data: { date: string; views: number; stories: number }[] }) {
+export function TrafficChart({
+  data,
+  trackingSince,
+}: {
+  data: { date: string; views: number; stories: number }[];
+  /** The first day views were recorded. Days before it are blank because
+   *  nothing was counted then, not because nobody was reading. */
+  trackingSince?: string;
+}) {
   const { t, language } = useAdminLang();
   const locale = language === "en" ? "en-IN" : "hi-IN";
+
+  const totalViews = data.reduce((sum, point) => sum + point.views, 0);
+  const totalStories = data.reduce((sum, point) => sum + point.stories, 0);
+  const sinceLabel = trackingSince
+    ? new Date(trackingSince).toLocaleDateString(locale, { day: "numeric", month: "long" })
+    : "";
+
+  const description = !trackingSince
+    ? t(
+        "व्यूज़ गिनना अभी शुरू हुआ है — पहली रीडिंग आते ही ग्राफ़ भरना शुरू हो जाएगा।",
+        "View counting has just started — the line fills in as readers arrive.",
+      )
+    : t(
+        `${sinceLabel} से गिनती चालू है · इन 14 दिनों में ${totalViews.toLocaleString("en-IN")} व्यूज़, ${totalStories} खबरें`,
+        `Counting since ${sinceLabel} · ${totalViews.toLocaleString("en-IN")} views and ${totalStories} stories in these 14 days`,
+      );
 
   return (
     <Card className="gap-4">
@@ -25,12 +49,7 @@ export function TrafficChart({ data }: { data: { date: string; views: number; st
         <CardTitle className="font-display text-base font-bold">
           {t("ट्रैफ़िक — पिछले 14 दिन", "Traffic — last 14 days")}
         </CardTitle>
-        <CardDescription>
-          {t(
-            "नमूना ग्राफ़ — रोज़ाना व्यूज़ ट्रैक होना अभी बाकी है। कुल व्यूज़ असली हैं।",
-            "Sample trend — per-day tracking is not recorded yet. The totals above are real.",
-          )}
-        </CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[240px] w-full">
@@ -56,7 +75,10 @@ export function TrafficChart({ data }: { data: { date: string; views: number; st
               tickLine={false}
               axisLine={false}
               width={44}
-              tickFormatter={(value: number) => `${Math.round(value / 1000)}k`}
+              allowDecimals={false}
+              tickFormatter={(value: number) =>
+                value >= 1000 ? `${Math.round(value / 1000)}k` : String(value)
+              }
             />
             <ChartTooltip
               content={
@@ -76,6 +98,14 @@ export function TrafficChart({ data }: { data: { date: string; views: number; st
               stroke="var(--color-views)"
               strokeWidth={2}
               fill="url(#fillViews)"
+            />
+            <Area
+              dataKey="stories"
+              type="monotone"
+              stroke="var(--color-stories)"
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+              fill="none"
             />
           </AreaChart>
         </ChartContainer>

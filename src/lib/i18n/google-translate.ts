@@ -61,7 +61,33 @@ export function translateBootstrapScript(
 ): string {
   const included = includedLanguages.length > 0 ? includedLanguages.join(",") : defaultLanguage;
 
-  return `(function(){try{
+  return `(function(){
+/* Google Translate rewrites the page's text nodes in place. React still holds
+   references to the originals, so the next re-render calls removeChild on a
+   node that now has a different parent and the whole tree unmounts with
+   "NotFoundError: The node to be removed is not a child of this node".
+   Nothing in React can prevent that from the outside, so the two DOM calls it
+   affects are made tolerant: if the node has already been moved, do the right
+   thing instead of throwing. This is the only reason these are patched. */
+try{
+  var removeChild=Node.prototype.removeChild;
+  Node.prototype.removeChild=function(child){
+    if(child.parentNode!==this){
+      if(child.parentNode)return removeChild.call(child.parentNode,child);
+      return child;
+    }
+    return removeChild.call(this,child);
+  };
+  var insertBefore=Node.prototype.insertBefore;
+  Node.prototype.insertBefore=function(node,before){
+    if(before&&before.parentNode!==this){
+      if(before.parentNode)return insertBefore.call(before.parentNode,node,before);
+      return this.appendChild(node);
+    }
+    return insertBefore.call(this,node,before);
+  };
+}catch(e){}
+try{
 var stored=localStorage.getItem("newshub-language")||${JSON.stringify(defaultLanguage)};
 var source=${JSON.stringify(source)};
 var host=location.hostname;

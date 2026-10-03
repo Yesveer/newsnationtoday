@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import { IconBolt, IconHome, IconPlayerPlay, IconSearch, IconVideo } from "@tabler/icons-react";
 import type { SiteSettings } from "@/lib/data/get-site-config";
 import { useAdminLang } from "@/components/admin/use-admin-lang";

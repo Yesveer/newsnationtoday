@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import { IconFlame } from "@tabler/icons-react";
 import { stateMapPaths } from "@/config/state-maps";
 import { toneTileStyle } from "@/lib/admin/tone";

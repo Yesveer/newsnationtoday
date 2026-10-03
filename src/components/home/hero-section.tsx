@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { formatRelativeTime } from "@/lib/format-date";
+import { TimeAgo } from "@/components/article/time-ago";
 import { useLanguage } from "@/components/i18n/language-provider";
 import { useSiteSettings } from "@/components/site/site-settings-provider";
 import { cn } from "@/lib/cn";
@@ -89,7 +89,7 @@ export function HeroSection({ articles }: { articles: ArticleWithRelations[] }) 
               </Link>
               <p className="mt-2 hidden text-sm text-white/80 sm:line-clamp-2">{active.excerpt}</p>
               <p className="mt-2 text-xs text-white/70">
-                {active.author.name} · {formatRelativeTime(active.publishedAt)}
+                {active.author.name} · <TimeAgo iso={active.publishedAt} />
               </p>
 
               {slides.length > 1 && (
@@ -139,7 +139,9 @@ export function HeroSection({ articles }: { articles: ArticleWithRelations[] }) 
                     <h3 className="line-clamp-2 text-sm leading-snug font-semibold text-text transition-colors group-hover:text-accent">
                       {story.title}
                     </h3>
-                    <p className="mt-1 text-xs text-text-muted">{formatRelativeTime(story.publishedAt)}</p>
+                    <p className="mt-1 text-xs text-text-muted">
+                      <TimeAgo iso={story.publishedAt} />
+                    </p>
                   </div>
                 </Link>
               ))}

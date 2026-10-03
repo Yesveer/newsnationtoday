@@ -24,6 +24,9 @@ interface ApiArticle {
   status: string;
   authorId?: string;
   authorName: string;
+  reviewedByName?: string;
+  publishedByName?: string;
+  socialLinks?: { platform: string; url: string; label?: string }[];
   tags: string[];
   isBreaking: boolean;
   isFeatured: boolean;
@@ -124,6 +127,9 @@ export function toArticle(article: ApiArticle, categories: Map<string, Category>
     coverImageAlt: article.coverImageAlt ?? article.title,
     categoryId: category.id,
     authorId: article.authorId ?? "",
+    reviewedByName: article.reviewedByName,
+    publishedByName: article.publishedByName,
+    socialLinks: article.socialLinks ?? [],
     tags: article.tags ?? [],
     status: "published",
     isFeatured: article.isFeatured,

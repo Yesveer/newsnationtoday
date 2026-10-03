@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Clock, Play } from "lucide-react";
-import { formatRelativeTime } from "@/lib/format-date";
+import { TimeAgo } from "@/components/article/time-ago";
 import { fadeUp } from "@/lib/motion-variants";
 import { useLanguage } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/cn";
@@ -69,7 +69,7 @@ export function StoryCard({ article, className }: { article: ArticleWithRelation
           <p className="line-clamp-2 text-[15px] text-text-muted">{article.excerpt}</p>
           <p className="mt-auto flex items-center gap-1.5 pt-1 text-[13px] text-text-muted">
             <Clock className="size-3.5" />
-            {formatRelativeTime(article.publishedAt)}
+            <TimeAgo iso={article.publishedAt} />
             <span aria-hidden>·</span>
             {article.author.name}
           </p>

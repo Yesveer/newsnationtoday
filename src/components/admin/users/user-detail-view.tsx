@@ -32,7 +32,7 @@ import type { AdminUser, UserRole } from "@/types/admin";
 /** One person's full record. Administrator-only, and the only screen that
  *  shows the real ID numbers. */
 export function UserDetailView({ id }: { id: string }) {
-  const { t } = useAdminLang();
+  const { t, language } = useAdminLang();
   const { user: currentUser } = useAdminSession();
 
   const [user, setUser] = useState<AdminUser | null>(null);
@@ -42,6 +42,8 @@ export function UserDetailView({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Their desk record, counted from the stories themselves.
+  const [activity, setActivity] = useState<api.ReviewActivity | null>(null);
 
   const hydrate = useCallback((next: AdminUser) => {
     setUser(next);
@@ -78,16 +80,20 @@ export function UserDetailView({ id }: { id: string }) {
   useEffect(() => {
     let active = true;
     void (async () => {
-      const result = await fetchUser();
+      const [result, rows] = await Promise.all([
+        fetchUser(),
+        api.listReviewActivity().catch(() => [] as api.ReviewActivity[]),
+      ]);
       if (!active) return;
       if (result.user) hydrate(result.user);
+      setActivity(rows.find((row) => row.userId === id) ?? null);
       setLoadError(result.error);
       setLoading(false);
     })();
     return () => {
       active = false;
     };
-  }, [fetchUser, hydrate]);
+  }, [fetchUser, hydrate, id]);
 
   const save = async () => {
     setSaving(true);
@@ -280,16 +286,50 @@ export function UserDetailView({ id }: { id: string }) {
               </div>
               <div className="flex justify-between">
                 <span>{t("जॉइन किया", "Joined")}</span>
-                <span className="text-text">{formatDate(user.joinedAt)}</span>
+                <span className="text-text">{formatDate(user.joinedAt, language)}</span>
               </div>
               <div className="flex justify-between">
                 <span>{t("आख़िरी बार सक्रिय", "Last active")}</span>
-                <span className="text-text">{formatRelative(user.lastActiveAt, new Date())}</span>
+                <span className="text-text">
+                  {user.lastActiveAt
+                    ? formatRelative(user.lastActiveAt, language)
+                    : t("कभी लॉगिन नहीं किया", "Never signed in")}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>{t("कुल खबरें", "Stories")}</span>
                 <span className="text-text">{user.storiesCount}</span>
               </div>
+
+              {activity ? (
+                <div className="mt-2 flex flex-col gap-1.5 rounded-lg bg-surface-muted/60 p-3">
+                  <p className="text-[11px] font-semibold tracking-wide text-text-muted uppercase">
+                    {t("रिव्यू का हिसाब", "Review record")}
+                  </p>
+                  {(
+                    [
+                      ["अप्रूव की", "Approved", activity.approved],
+                      ["बदलाव मांगे", "Changes requested", activity.changesRequested],
+                      ["रिजेक्ट कीं", "Rejected", activity.rejected],
+                      ["शेड्यूल कीं", "Scheduled", activity.scheduled],
+                      ["कमेंट किए", "Comments", activity.comments],
+                      ["अभी बाकी", "Waiting on them", activity.pending],
+                    ] as const
+                  ).map(([hi, en, value]) => (
+                    <div key={en} className="flex justify-between">
+                      <span>{t(hi, en)}</span>
+                      <span
+                        className={
+                          value > 0 ? "font-semibold text-text tabular-nums" : "tabular-nums"
+                        }
+                      >
+                        {value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
               <Button asChild variant="outline" size="sm" className="mt-1">
                 <a href={`mailto:${user.email}`}>
                   <IconMail className="size-4" /> {t("ईमेल भेजें", "Send an email")}

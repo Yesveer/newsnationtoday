@@ -28,7 +28,7 @@ export function ReviewPanel({
   onChanged?: (item: NewsItem) => void;
 }) {
   const { can } = useAdminSession();
-  const { t } = useAdminLang();
+  const { t, language } = useAdminLang();
   const [comments, setComments] = useState<ReviewComment[]>(item.comments);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -86,6 +86,31 @@ export function ReviewPanel({
             <CardDescription>
               {t("एडमिन यहीं बदलाव मांगता है, रिपोर्टर यहीं जवाब देता है।", "The desk asks for changes here; the reporter replies here.")}
             </CardDescription>
+            <p className="mt-1 text-[12px] text-text-muted">
+              {t("रिपोर्टर", "Reporter")}:{" "}
+              <span className="font-medium text-text">{item.authorName}</span>
+              {" · "}
+              {t("भेजा गया", "Assigned")}:{" "}
+              <span className="font-medium text-text">
+                {item.reviewers?.length
+                  ? item.reviewers.map((person) => person.name).join(", ")
+                  : t("कोई भी एडमिन", "any admin")}
+              </span>
+              {item.reviewedBy ? (
+                <>
+                  {" · "}
+                  {t("रिव्यू किया", "Reviewed by")}:{" "}
+                  <span className="font-medium text-text">{item.reviewedBy.name}</span>
+                </>
+              ) : null}
+              {item.publishedByName ? (
+                <>
+                  {" · "}
+                  {t("पब्लिश किया", "Published by")}:{" "}
+                  <span className="font-medium text-text">{item.publishedByName}</span>
+                </>
+              ) : null}
+            </p>
           </div>
           <StatusBadge status={item.status} />
         </div>
@@ -101,7 +126,7 @@ export function ReviewPanel({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-[12.5px] font-semibold text-text">{comment.authorName}</span>
                   <RoleBadge role={comment.authorRole} size="xs" />
-                  <span className="text-[11px] text-text-muted">{formatRelative(comment.createdAt)}</span>
+                  <span className="text-[11px] text-text-muted">{formatRelative(comment.createdAt, language)}</span>
                 </div>
                 <p className="mt-1 text-[13px] leading-relaxed text-text">{comment.body}</p>
               </div>
@@ -186,7 +211,7 @@ export function ReviewPanel({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <StatusBadge status={event.status} />
                   <span className="text-[12px] text-text-muted">
-                    {event.byName} · {formatRelative(event.at)}
+                    {event.byName} · {formatRelative(event.at, language)}
                   </span>
                 </div>
                 {event.note ? <p className="mt-0.5 text-[12.5px] text-text">{event.note}</p> : null}

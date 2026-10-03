@@ -46,7 +46,7 @@ export function StatCard({
                 ) : (
                   <IconTrendingDown className="size-3.5" stroke={2} />
                 )}
-                {Math.abs(trend)}%
+                {Math.abs(Math.round(trend))}%
               </span>
             ) : null}
             {hint ? <span className="truncate text-[11px] text-text-muted">{hint}</span> : null}

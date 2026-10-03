@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,11 +16,23 @@ import {
   IconDeviceFloppy,
   IconPhotoUp,
   IconSend,
+  IconShare3,
   IconSparkles,
   IconStar,
+  IconUserCheck,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,13 +64,25 @@ import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { ReviewPanel } from "@/components/admin/news/review-panel";
 import { MediaPickerDialog } from "@/components/admin/media/media-picker-dialog";
+import { RichTextEditor } from "@/components/admin/news/rich-text-editor";
+import { SocialLinksField } from "@/components/admin/news/social-links-field";
+import { ReviewerPicker } from "@/components/admin/news/reviewer-picker";
 import { useAdminSession } from "@/components/admin/admin-session";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
+import { formatDateTime } from "@/lib/admin/format";
+import { toStoryHtml } from "@/lib/story-html";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/admin";
 import { categoriesConfig } from "@/config/categories.config";
-import type { NewsItem } from "@/types/admin";
+import type { NewsItem, SocialLink } from "@/types/admin";
 import { cn } from "@/lib/cn";
+
+function plainTextLength(html: string): number {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .trim().length;
+}
 
 const makeEditorSchema = (t: (hi: string, en: string) => string) =>
   z.object({
@@ -97,15 +121,14 @@ const makeEditorSchema = (t: (hi: string, en: string) => string) =>
           "Keep the summary under 300 characters",
         ),
       ),
-    body: z
-      .string()
-      .min(
-        50,
-        t(
-          "खबर का मुख्य हिस्सा कम से कम 50 अक्षर का हो",
-          "The story body needs at least 50 characters",
-        ),
+    // The body is HTML now, so measure the text a reader would see — markup
+    // must not be what gets a story past the minimum.
+    body: z.string().refine((html) => plainTextLength(html) >= 50, {
+      message: t(
+        "खबर का मुख्य हिस्सा कम से कम 50 अक्षर का हो",
+        "The story body needs at least 50 characters",
       ),
+    }),
     coverImageUrl: z
       .string()
       .min(5, t("कवर इमेज ज़रूरी है", "A cover image is required")),
@@ -116,6 +139,14 @@ const makeEditorSchema = (t: (hi: string, en: string) => string) =>
     isBreaking: z.boolean(),
     isFeatured: z.boolean(),
     scheduledFor: z.string().optional(),
+    reviewerIds: z.array(z.string()),
+    socialLinks: z.array(
+      z.object({
+        platform: z.string(),
+        url: z.string(),
+        label: z.string().optional(),
+      }),
+    ),
     metaTitle: z.string().optional(),
     metaDescription: z.string().optional(),
     keywords: z.string().optional(),
@@ -140,10 +171,13 @@ export function ArticleEditor({
   onSaved?: (item: NewsItem) => void;
 }) {
   const { role, user, can } = useAdminSession();
-  const { t } = useAdminLang();
+  const { t, language } = useAdminLang();
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
   const isNew = !item;
   const isOwn = item ? item.authorId === user.id : true;
   const canEdit = isNew || can("news.edit.any") || isOwn;
@@ -155,7 +189,7 @@ export function ArticleEditor({
       title: item?.title ?? "",
       slug: item?.slug ?? "",
       excerpt: item?.excerpt ?? "",
-      body: item?.body ?? "",
+      body: toStoryHtml(item?.body ?? ""),
       coverImageUrl: item?.coverImageUrl ?? "",
       categorySlug: item?.categorySlug ?? "desh",
       topic: item?.topic ?? "",
@@ -164,6 +198,8 @@ export function ArticleEditor({
       isBreaking: item?.isBreaking ?? false,
       isFeatured: item?.isFeatured ?? false,
       scheduledFor: item?.scheduledFor?.slice(0, 16) ?? "",
+      reviewerIds: item?.reviewers?.map((person) => person.id) ?? [],
+      socialLinks: item?.socialLinks ?? [],
       metaTitle: item?.seo.metaTitle ?? "",
       metaDescription: item?.seo.metaDescription ?? "",
       keywords: item?.seo.keywords ?? "",
@@ -176,6 +212,9 @@ export function ArticleEditor({
   // Topics are per category and live in the database, so the list refreshes
   // whenever the category changes.
   const [topicOptions, setTopicOptions] = useState<api.AdminTopic[]>([]);
+  // Who can review. Any of them may act on the story; picking one says who is
+  // expected to, and that person is the one the email is addressed to.
+  const [reviewers, setReviewers] = useState<api.Reviewer[]>([]);
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -186,6 +225,17 @@ export function ArticleEditor({
       active = false;
     };
   }, [categorySlug]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const list = await api.listReviewers().catch(() => []);
+      if (active) setReviewers(list);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   /** Saves the form, then optionally moves the story along the workflow.
    *
@@ -212,6 +262,8 @@ export function ArticleEditor({
             isBreaking: values.isBreaking,
             isFeatured: values.isFeatured,
             scheduledFor: values.scheduledFor || undefined,
+            reviewerIds: values.reviewerIds ?? [],
+            socialLinks: (values.socialLinks ?? []).filter((link) => link.url.trim() !== ""),
             seo: {
               metaTitle: values.metaTitle,
               metaDescription: values.metaDescription,
@@ -251,6 +303,41 @@ export function ArticleEditor({
           ),
         }),
     )();
+
+  /** One button, two outcomes: an admin removes the story, a reporter files a
+   *  request for an admin to approve. The API decides which — it knows the
+   *  caller's role; the UI only reports what came back. */
+  const runDelete = async () => {
+    if (!item) return;
+    setDeleting(true);
+    try {
+      const result = await api.deleteNews(item.id, deleteReason);
+      setConfirmDelete(false);
+      if (result.news) {
+        toast.success(
+          t("डिलीट रिक्वेस्ट एडमिन को भेज दी गई", "Delete request sent to an admin"),
+          {
+            description: t(
+              "अप्रूव होने के बाद खबर हट जाएगी।",
+              "The story goes once an admin approves.",
+            ),
+          },
+        );
+        onSaved?.(result.news);
+      } else {
+        toast.success(t("खबर डिलीट कर दी गई", "Story deleted"));
+        router.replace("/admin/news");
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : t("सर्वर से संपर्क नहीं हो पाया।", "Could not reach the server."),
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <Form {...form}>
@@ -446,23 +533,12 @@ export function ArticleEditor({
                     <FormItem>
                       <FormLabel>{t("खबर", "Story")}</FormLabel>
                       <FormControl>
-                        <Textarea
-                          {...field}
+                        <RichTextEditor
+                          value={field.value}
+                          onChange={field.onChange}
                           disabled={!canEdit}
-                          rows={16}
-                          placeholder={t(
-                            "पूरी खबर यहाँ लिखिए…",
-                            "Write the full story here…",
-                          )}
-                          className="leading-relaxed"
                         />
                       </FormControl>
-                      <FormDescription>
-                        {t(
-                          `${field.value.trim().split(/\s+/).filter(Boolean).length} शब्द · लगभग ${Math.max(1, Math.round(field.value.trim().split(/\s+/).filter(Boolean).length / 200))} मिनट का पाठ`,
-                          `${field.value.trim().split(/\s+/).filter(Boolean).length} words · about ${Math.max(1, Math.round(field.value.trim().split(/\s+/).filter(Boolean).length / 200))} min read`,
-                        )}
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -781,6 +857,109 @@ export function ArticleEditor({
               </CardContent>
             </Card>
 
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display flex items-center gap-1.5 text-base font-bold">
+                  <IconUserCheck className="size-4" /> {t("रिव्यू", "Review")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3 pt-0">
+                <FormField
+                  control={form.control}
+                  name="reviewerIds"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("कौन-कौन रिव्यू करेगा", "Who should review this")}</FormLabel>
+                      <FormControl>
+                        <ReviewerPicker
+                          reviewers={reviewers}
+                          value={field.value ?? []}
+                          onChange={field.onChange}
+                          disabled={!canEdit}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-[11px]">
+                        {t(
+                          "एक से ज़्यादा लोग चुन सकते हैं — सबको मेल जाएगा और सबकी क्यू में दिखेगा। रिव्यू कोई भी एडमिन कर सकता है; जो करेगा, उसी का नाम खबर पर दिखेगा।",
+                          "Pick as many as you need — each is emailed and sees it in their queue. Any admin can still review it; whoever does is the name credited on the story.",
+                        )}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {item ? (
+                  <dl className="flex flex-col gap-1.5 rounded-lg bg-surface-muted/60 p-3 text-[12px]">
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-text-muted">{t("रिपोर्टर", "Reporter")}</dt>
+                      <dd className="font-medium text-text">{item.authorName}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-text-muted">{t("भेजा गया", "Assigned to")}</dt>
+                      <dd className="font-medium text-text">
+                        {item.reviewers?.length
+                          ? item.reviewers.map((person) => person.name).join(", ")
+                          : t("कोई भी एडमिन", "Any admin")}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-text-muted">{t("रिव्यू किया", "Reviewed by")}</dt>
+                      <dd className="font-medium text-text">
+                        {item.reviewedBy?.name ?? t("अभी नहीं", "Not yet")}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-text-muted">{t("पब्लिश किया", "Published by")}</dt>
+                      <dd className="font-medium text-text">
+                        {item.publishedByName ?? "—"}
+                      </dd>
+                    </div>
+                    {item.publishedAt ? (
+                      <div className="flex justify-between gap-2">
+                        <dt className="text-text-muted">{t("पब्लिश समय", "Published at")}</dt>
+                        <dd className="font-medium text-text">
+                          {formatDateTime(item.publishedAt, language)}
+                        </dd>
+                      </div>
+                    ) : null}
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-text-muted">{t("आख़िरी बदलाव", "Last edited")}</dt>
+                      <dd className="font-medium text-text">
+                        {formatDateTime(item.updatedAt, language)}
+                      </dd>
+                    </div>
+                  </dl>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display flex items-center gap-1.5 text-base font-bold">
+                  <IconShare3 className="size-4" /> {t("सोशल मीडिया लिंक", "Social media links")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <FormField
+                  control={form.control}
+                  name="socialLinks"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <SocialLinksField
+                          value={field.value as SocialLink[]}
+                          onChange={field.onChange}
+                          disabled={!canEdit}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
             <Card className="gap-0">
               <Collapsible>
                 <CollapsibleTrigger className="flex w-full items-center justify-between px-6 py-4 text-left">
@@ -850,22 +1029,8 @@ export function ArticleEditor({
                       "justify-start text-destructive",
                       "hover:bg-destructive/10",
                     )}
-                    onClick={() =>
-                      toast.success(
-                        can("news.delete")
-                          ? t("खबर डिलीट की गई", "Story deleted")
-                          : t(
-                              "डिलीट रिक्वेस्ट एडमिन को भेजी गई",
-                              "Delete request sent to an admin",
-                            ),
-                        {
-                          description: t(
-                            "बैकएंड जुड़ते ही यह लाइव हो जाएगा।",
-                            "This goes live once the backend is connected.",
-                          ),
-                        },
-                      )
-                    }
+                    disabled={deleting}
+                    onClick={() => setConfirmDelete(true)}
                   >
                     <IconTrash className="size-4" />
                     {can("news.delete")
@@ -885,6 +1050,57 @@ export function ArticleEditor({
             ) : null}
           </div>
         </div>
+
+        <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {can("news.delete")
+                  ? t("यह खबर डिलीट करें?", "Delete this story?")
+                  : t("डिलीट की रिक्वेस्ट भेजें?", "Request this story be deleted?")}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {can("news.delete")
+                  ? t(
+                      "यह वापस नहीं आएगी। अगर खबर पब्लिश है तो साइट से भी तुरंत हट जाएगी।",
+                      "This cannot be undone. A published story also disappears from the site at once.",
+                    )
+                  : t(
+                      "खबर तभी हटेगी जब कोई एडमिन रिक्वेस्ट अप्रूव करेगा।",
+                      "The story is removed only after an admin approves your request.",
+                    )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {!can("news.delete") ? (
+              <Textarea
+                value={deleteReason}
+                onChange={(event) => setDeleteReason(event.target.value)}
+                rows={3}
+                placeholder={t("वजह लिखिए (एडमिन को दिखेगी)", "Why? (the admin will see this)")}
+              />
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>
+                {t("रहने दें", "Cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                disabled={deleting}
+                className="bg-destructive text-white hover:bg-destructive/90"
+                onClick={(event) => {
+                  // Keep the dialog open until the request comes back.
+                  event.preventDefault();
+                  void runDelete();
+                }}
+              >
+                {deleting
+                  ? t("हो रहा है…", "Working…")
+                  : can("news.delete")
+                    ? t("डिलीट करें", "Delete")
+                    : t("रिक्वेस्ट भेजें", "Send request")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <MediaPickerDialog
           open={pickerOpen}

@@ -19,6 +19,7 @@ import { StatCard } from "@/components/admin/stat-card";
 import { NewsMiniList } from "@/components/admin/news-mini-list";
 import { RoleBadge } from "@/components/admin/role-badge";
 import { TrafficChart } from "@/components/admin/dashboard/traffic-chart";
+import { ReviewActivityCard } from "@/components/admin/dashboard/review-activity-card";
 import { CategoryChart } from "@/components/admin/dashboard/category-chart";
 import { useAdminSession } from "@/components/admin/admin-session";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
@@ -26,10 +27,13 @@ import { formatCompact, formatNumber, formatRelative } from "@/lib/admin/format"
 import { toneDotStyle } from "@/lib/admin/tone";
 import type { AdminUser, AuditLog, NewsItem } from "@/types/admin";
 import type { DashboardStats } from "@/lib/data/admin/get-admin-data";
+import type * as api from "@/lib/api/admin";
 
 export function DashboardView({
   stats,
   traffic,
+  trafficSince,
+  reviewActivity,
   breakdown,
   reviewQueue,
   recentNews,
@@ -38,6 +42,8 @@ export function DashboardView({
 }: {
   stats: DashboardStats;
   traffic: { date: string; views: number; stories: number }[];
+  trafficSince: string;
+  reviewActivity: api.ReviewActivity[];
   breakdown: { category: string; views: number }[];
   reviewQueue: NewsItem[];
   recentNews: NewsItem[];
@@ -45,7 +51,13 @@ export function DashboardView({
   users: AdminUser[];
 }) {
   const { role, user, can } = useAdminSession();
-  const { t } = useAdminLang();
+  // Week on week, from the same series the chart draws. Before a full
+  // fortnight of counting there is nothing honest to compare, so no arrow.
+  const lastWeek = traffic.slice(-7).reduce((sum, point) => sum + point.views, 0);
+  const weekBefore = traffic.slice(-14, -7).reduce((sum, point) => sum + point.views, 0);
+  const viewsTrend = weekBefore > 0 ? ((lastWeek - weekBefore) / weekBefore) * 100 : undefined;
+  const viewsLast14 = traffic.reduce((sum, point) => sum + point.views, 0);
+  const { t, language } = useAdminLang();
   const isReporter = role === "reporter";
   const myNews = recentNews.filter((item) => item.authorId === user.id);
 
@@ -108,18 +120,23 @@ export function DashboardView({
               label={t("पब्लिश्ड व्यूज़", "Published views")}
               value={formatCompact(
                 myNews.filter((item) => item.status === "published").reduce((sum, item) => sum + item.views, 0),
+                language,
               )}
               icon={<IconEye className="size-5" stroke={1.7} />}
-              trend={12}
+              hint={t("अब तक कुल", "All time")}
             />
           </>
         ) : (
           <>
             <StatCard
-              label={t("कुल व्यूज़ (14 दिन)", "Total views (14 days)")}
-              value={formatCompact(stats.totalViews)}
+              label={t("व्यूज़ (14 दिन)", "Views (14 days)")}
+              value={formatCompact(viewsLast14, language)}
               icon={<IconEye className="size-5" stroke={1.7} />}
-              trend={8.4}
+              trend={viewsTrend}
+              hint={t(
+                `अब तक कुल ${formatCompact(stats.totalViews, language)}`,
+                `${formatCompact(stats.totalViews, language)} all time`,
+              )}
             />
             <StatCard
               label={t("पब्लिश्ड खबरें", "Published stories")}
@@ -158,9 +175,11 @@ export function DashboardView({
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <TrafficChart data={traffic} />
+        <TrafficChart data={traffic} trackingSince={trafficSince} />
         <CategoryChart data={breakdown} />
       </div>
+
+      {can("news.review") ? <ReviewActivityCard activity={reviewActivity} compact /> : null}
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card className="gap-0 py-0">
@@ -215,7 +234,7 @@ export function DashboardView({
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] leading-snug text-text">{log.description}</p>
                       <p className="mt-0.5 text-[11px] text-text-muted">
-                        {log.actorName} · {formatRelative(log.at)} · <code className="text-[10px]">{log.action}</code>
+                        {log.actorName} · {formatRelative(log.at, language)} · <code className="text-[10px]">{log.action}</code>
                       </p>
                     </div>
                   </li>
@@ -249,7 +268,7 @@ export function DashboardView({
                           <p className="line-clamp-1 text-[12px] font-semibold text-accent">{item.title}</p>
                           <p className="line-clamp-2 text-[13px] leading-snug text-text">{comment.body}</p>
                           <p className="text-[11px] text-text-muted">
-                            {comment.authorName} · {formatRelative(comment.createdAt)}
+                            {comment.authorName} · {formatRelative(comment.createdAt, language)}
                           </p>
                         </Link>
                       </li>
