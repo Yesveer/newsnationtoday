@@ -33,6 +33,7 @@ interface ApiUser {
   employeeId?: string;
   dateOfBirth?: string;
   gender?: string;
+  bloodGroup?: string;
   bio?: string;
   address?: UserAddress;
   identity?: UserIdentity;
@@ -61,6 +62,7 @@ export function toAdminUser(user: ApiUser): AdminUser {
     employeeId: user.employeeId,
     dateOfBirth: user.dateOfBirth,
     gender: user.gender,
+    bloodGroup: user.bloodGroup,
     bio: user.bio,
     address: user.address,
     identity: user.identity,
@@ -79,6 +81,7 @@ export interface UserProfileInput {
   employeeId?: string;
   dateOfBirth?: string;
   gender?: string;
+  bloodGroup?: string;
   bio?: string;
   avatarUrl?: string;
   address?: UserAddress;
@@ -123,18 +126,36 @@ export async function logout(): Promise<void> {
   }
 }
 
-export interface ProfileInput {
-  name?: string;
-  desk?: string;
-  phone?: string;
-  avatarUrl?: string;
-}
+/** The only fields a person may change about their own account.
+ *
+ *  Name, email, role, the ID numbers, the emergency contact and the staff ID
+ *  are the personnel record — an administrator sets those. The API refuses
+ *  them, and the body is built from this list rather than from whatever the
+ *  page happens to hold, so a locked field cannot be sent by accident. */
+const SELF_EDITABLE = [
+  "phone",
+  "altPhone",
+  "desk",
+  "reportingArea",
+  "dateOfBirth",
+  "gender",
+  "bio",
+  "avatarUrl",
+  "address",
+] as const;
 
-/** Self-service profile edit — name, desk, phone and photo only. */
-export async function updateProfile(input: ProfileInput): Promise<Session> {
+export type ProfileInput = Pick<UserProfileInput, (typeof SELF_EDITABLE)[number]>;
+
+/** Self-service profile edit. */
+export async function updateProfile(input: UserProfileInput): Promise<Session> {
+  const body: Record<string, unknown> = {};
+  for (const key of SELF_EDITABLE) {
+    if (input[key] !== undefined) body[key] = input[key];
+  }
+
   const data = await apiFetch<{ user: ApiUser; permissions: Permission[] }>("/auth/me", {
     method: "PATCH",
-    body: input,
+    body,
   });
   return { user: toAdminUser(data.user), permissions: data.permissions };
 }
@@ -674,10 +695,16 @@ export async function listMedia(params: { kind?: AssetKind; search?: string; typ
 
 /** Uploads one file. `kind` decides which storage profile it lands in:
  *  "portal" for logos and icons, "news" for story photos and video. */
-export async function uploadMedia(file: File, kind: AssetKind = "portal"): Promise<MediaAsset> {
+export async function uploadMedia(
+  file: File,
+  kind: AssetKind = "portal",
+  /** "avatar" asks the server for the tighter 1 MB profile-photo limit. */
+  purpose?: "avatar",
+): Promise<MediaAsset> {
   const form = new FormData();
   form.append("file", file);
   form.append("kind", kind);
+  if (purpose) form.append("purpose", purpose);
   const data = await apiUpload<{ asset: MediaAsset }>("/media", form);
   return data.asset;
 }

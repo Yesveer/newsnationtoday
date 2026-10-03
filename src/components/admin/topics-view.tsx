@@ -269,6 +269,7 @@ export function TopicsView() {
                   <Button
                     variant="ghost"
                     size="icon-xs"
+                    className="size-9 sm:size-6"
                     disabled={index === 0 || query !== ""}
                     onClick={() => void move(index, -1)}
                     aria-label={t("ऊपर", "Move up")}
@@ -278,6 +279,7 @@ export function TopicsView() {
                   <Button
                     variant="ghost"
                     size="icon-xs"
+                    className="size-9 sm:size-6"
                     disabled={index === visible.length - 1 || query !== ""}
                     onClick={() => void move(index, 1)}
                     aria-label={t("नीचे", "Move down")}

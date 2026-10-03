@@ -3,7 +3,7 @@
 import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconArrowLeft, IconCircleFilled } from "@tabler/icons-react";
+import { IconChevronRight, IconCircleFilled, IconExternalLink } from "@tabler/icons-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +17,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,24 +42,30 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-sidebar-border">
-      <SidebarHeader className="gap-0 border-b border-sidebar-border">
+      <SidebarHeader className="gap-0 px-2 pt-3 pb-2">
         <Link
           href="/admin"
           onClick={() => setOpenMobile(false)}
-          className="flex items-center gap-2.5 px-2 py-2.5 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center"
+          className={cn(
+            "flex items-center gap-2.5 rounded-xl px-2 py-2 transition-colors",
+            "hover:bg-sidebar-accent/60",
+            "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
+          )}
         >
-          <span className="relative block h-8 w-8 shrink-0 overflow-hidden rounded-md bg-sidebar-accent">
-            <Image src="/logo-nnt.png" alt={siteConfig.name} fill className="object-contain p-0.5" sizes="32px" />
+          <span className="relative block size-9 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-black/5">
+            <Image src="/logo-nnt.png" alt={siteConfig.name} fill className="object-contain p-1" sizes="36px" />
           </span>
-          <span className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
+          <span className="flex min-w-0 flex-col leading-tight group-data-[collapsible=icon]:hidden">
             {/* The brand name is a name, not a phrase — the translator leaves it alone. */}
             <span
-              className="notranslate truncate text-sm font-bold tracking-tight text-sidebar-foreground"
+              className="notranslate truncate text-[13.5px] font-bold tracking-tight text-sidebar-foreground"
               translate="no"
             >
               {siteConfig.name}
             </span>
-            <span className="truncate text-[11px] text-sidebar-foreground/60">{t("एडमिन पोर्टल", "Admin portal")}</span>
+            <span className="truncate text-[10.5px] font-medium tracking-wide text-sidebar-foreground/50 uppercase">
+              {t("एडमिन पोर्टल", "Admin portal")}
+            </span>
           </span>
         </Link>
       </SidebarHeader>
@@ -73,8 +78,8 @@ export function AppSidebar() {
           if (items.length === 0) return null;
 
           return (
-            <SidebarGroup key={group.label}>
-              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wide text-sidebar-foreground/50 uppercase">
+            <SidebarGroup key={group.label} className="px-2 py-1">
+              <SidebarGroupLabel className="h-7 px-2 text-[10px] font-semibold tracking-[0.12em] text-sidebar-foreground/45 uppercase">
                 {t(group.label, group.labelEn)}
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -87,15 +92,32 @@ export function AppSidebar() {
                           asChild
                           isActive={isActive(item.href)}
                           tooltip={t(item.label, item.labelEn)}
-                          className="gap-2.5"
+                          className={cn(
+                            "relative h-9 gap-2.5 rounded-lg font-medium",
+                            // The rail on the left is what tells you where you
+                            // are at a glance, even before the tint registers.
+                            "before:absolute before:top-1/2 before:left-0 before:h-0 before:w-[3px]",
+                            "before:-translate-y-1/2 before:rounded-r-full before:bg-accent",
+                            "before:transition-all before:content-['']",
+                            "data-[active=true]:before:h-5",
+                            "data-[active=true]:bg-accent/10 data-[active=true]:text-accent",
+                            "data-[active=true]:hover:bg-accent/15",
+                            "group-data-[collapsible=icon]:before:hidden",
+                          )}
                         >
                           <Link href={item.href} onClick={() => setOpenMobile(false)}>
-                            <AdminIcon name={item.icon} className="size-[18px]" />
+                            <AdminIcon
+                              name={item.icon}
+                              className={cn(
+                                "size-[18px] shrink-0 transition-colors",
+                                isActive(item.href) ? "text-accent" : "text-sidebar-foreground/60",
+                              )}
+                            />
                             <span className="text-[13.5px]">{t(item.label, item.labelEn)}</span>
                           </Link>
                         </SidebarMenuButton>
                         {count > 0 ? (
-                          <SidebarMenuBadge className="bg-accent/15 text-[11px] font-bold text-accent">
+                          <SidebarMenuBadge className="min-w-5 justify-center rounded-full bg-accent px-1.5 text-[10.5px] font-bold text-white tabular-nums">
                             {count}
                           </SidebarMenuBadge>
                         ) : null}
@@ -109,36 +131,49 @@ export function AppSidebar() {
         })}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border">
+      <SidebarFooter className="gap-2 px-2 pb-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip={t("वेबसाइट देखें", "View website")} className="gap-2.5">
+            <SidebarMenuButton
+              asChild
+              tooltip={t("वेबसाइट देखें", "View website")}
+              className="h-9 gap-2.5 rounded-lg font-medium"
+            >
               <Link href="/" target="_blank">
-                <IconArrowLeft className="size-[18px]" stroke={1.7} />
+                <IconExternalLink className="size-[18px] shrink-0 text-sidebar-foreground/60" stroke={1.7} />
                 <span className="text-[13.5px]">{t("वेबसाइट देखें", "View website")}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarSeparator className="group-data-[collapsible=icon]:hidden" />
-        <div
+
+        {/* The signed-in person as a card rather than a loose row, and a way
+            out of the portal from the same place. */}
+        <Link
+          href="/admin/profile"
+          onClick={() => setOpenMobile(false)}
           className={cn(
-            "flex items-center gap-2.5 px-2 py-1.5",
-            "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
+            "flex items-center gap-2.5 rounded-xl border border-sidebar-border bg-sidebar-accent/40 p-2",
+            "transition-colors hover:bg-sidebar-accent",
+            "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-0",
+            "group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0",
           )}
         >
-          <Avatar className="size-8 shrink-0">
-            <AvatarImage src={user.avatarUrl} alt={user.name} />
-            <AvatarFallback className="text-xs">{user.name.slice(0, 1)}</AvatarFallback>
-          </Avatar>
-          <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
-            <span className="flex items-center gap-1 truncate text-[13px] font-semibold text-sidebar-foreground">
-              {user.name}
-              <IconCircleFilled className="size-2 text-emerald-500" />
+          <span className="relative shrink-0">
+            <Avatar className="size-9">
+              <AvatarImage src={user.avatarUrl} alt={user.name} />
+              <AvatarFallback className="text-xs font-semibold">{user.name.slice(0, 1)}</AvatarFallback>
+            </Avatar>
+            <IconCircleFilled className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full text-emerald-500 ring-2 ring-sidebar" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col leading-tight group-data-[collapsible=icon]:hidden">
+            <span className="truncate text-[13px] font-semibold text-sidebar-foreground">{user.name}</span>
+            <span className="mt-0.5 flex">
+              <RoleBadge role={role} size="xs" />
             </span>
-            <RoleBadge role={role} size="xs" />
-          </div>
-        </div>
+          </span>
+          <IconChevronRight className="size-4 shrink-0 text-sidebar-foreground/40 group-data-[collapsible=icon]:hidden" />
+        </Link>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

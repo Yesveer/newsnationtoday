@@ -15,6 +15,7 @@ export type Permission =
   | "categories.manage"
   | "appearance.manage"
   | "settings.manage"
+  | "users.create.reporter"
   | "users.manage"
   | "audit.view";
 
@@ -35,6 +36,7 @@ const adminPermissions: Permission[] = [
   "categories.manage",
   "appearance.manage",
   "settings.manage",
+  "users.create.reporter",
 ];
 
 const administratorPermissions: Permission[] = [

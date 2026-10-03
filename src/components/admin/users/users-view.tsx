@@ -64,6 +64,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/admin/page-header";
 import { RoleBadge } from "@/components/admin/role-badge";
+import { AvatarUpload } from "@/components/admin/users/avatar-upload";
 import { StatCard } from "@/components/admin/stat-card";
 import { useAdminSession } from "@/components/admin/admin-session";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
@@ -88,7 +89,9 @@ const allRoles: UserRole[] = ["administrator", "admin", "reporter"];
  *  screen, and the API enforces that again on every call. */
 export function UsersView() {
   const { t, language } = useAdminLang();
-  const { user: currentUser } = useAdminSession();
+  const { user: currentUser, can } = useAdminSession();
+  // Administrators manage everyone; an admin may only add reporters.
+  const canManageUsers = can("users.manage");
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -272,7 +275,7 @@ export function UsersView() {
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard label={t("कुल यूज़र", "Total users")} value={counts.total} icon={<IconUsers className="size-5" stroke={1.7} />} />
         <StatCard label={t("एक्टिव", "Active")} value={counts.active} icon={<IconUserCheck className="size-5" stroke={1.7} />} />
         <StatCard
@@ -312,8 +315,8 @@ export function UsersView() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="min-w-[220px]">{t("यूज़र", "User")}</TableHead>
-                <TableHead>{t("रोल", "Role")}</TableHead>
+                <TableHead className="min-w-0 sm:min-w-[220px]">{t("यूज़र", "User")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("रोल", "Role")}</TableHead>
                 <TableHead className="hidden md:table-cell">{t("डेस्क", "Desk")}</TableHead>
                 <TableHead className="hidden lg:table-cell">{t("स्थिति", "Status")}</TableHead>
                 <TableHead className="hidden xl:table-cell">{t("जॉइन", "Joined")}</TableHead>
@@ -334,7 +337,7 @@ export function UsersView() {
                     const isSelf = user.id === currentUser.id;
                     return (
                       <TableRow key={user.id}>
-                        <TableCell>
+                        <TableCell className="whitespace-normal">
                           <div className="flex items-center gap-2.5">
                             <Avatar className="size-9">
                               <AvatarImage src={user.avatarUrl} alt={user.name} />
@@ -342,18 +345,25 @@ export function UsersView() {
                             </Avatar>
                             <div className="min-w-0">
                               <p className="truncate text-[13.5px] font-medium text-text">
-                                <Link href={`/admin/users/${user.id}`} className="hover:text-accent">
-                                  {user.name}
-                                </Link>
+                                {canManageUsers ? (
+                                  <Link href={`/admin/users/${user.id}`} className="hover:text-accent">
+                                    {user.name}
+                                  </Link>
+                                ) : (
+                                  user.name
+                                )}
                                 {isSelf ? (
                                   <span className="ml-1.5 text-[11px] text-text-muted">({t("आप", "you")})</span>
                                 ) : null}
                               </p>
                               <p className="truncate text-[11.5px] text-text-muted">{user.email}</p>
+                              <span className="mt-1 inline-flex sm:hidden">
+                                <RoleBadge role={user.role} size="xs" />
+                              </span>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell">
                           <RoleBadge role={user.role} />
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-[12.5px] text-text-muted">
@@ -383,6 +393,20 @@ export function UsersView() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
+                              {/* Everything here is an administrator's call.
+                                  An admin sees the team so they know who is
+                                  on it, and can add a reporter — nothing
+                                  more, which is what the API enforces too. */}
+                              {!canManageUsers ? (
+                                <DropdownMenuItem disabled>
+                                  {t(
+                                    "सिर्फ़ एडमिनिस्ट्रेटर बदल सकते हैं",
+                                    "Only an administrator can change this",
+                                  )}
+                                </DropdownMenuItem>
+                              ) : null}
+                              {canManageUsers ? (
+                                <>
                               <DropdownMenuItem asChild>
                                 <Link href={`/admin/users/${user.id}`}>
                                   <IconUserCircle className="size-4" /> {t("पूरी जानकारी", "Full details")}
@@ -422,6 +446,8 @@ export function UsersView() {
                               >
                                 <IconTrash className="size-4" /> {t("डिलीट करें", "Delete")}
                               </DropdownMenuItem>
+                                </>
+                              ) : null}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -444,7 +470,7 @@ export function UsersView() {
         <p className="mb-3 text-[12px] font-semibold tracking-wide text-text-muted uppercase">
           {t("रोल की अनुमतियाँ", "Role permissions")}
         </p>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {allRoles.map((role) => (
             <div key={role} className="rounded-lg border border-border p-3">
               <RoleBadge role={role} />
@@ -476,7 +502,10 @@ export function UsersView() {
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="invite-name">{t("पूरा नाम", "Full name")}</Label>
+                    <Label htmlFor="invite-name">
+                      {t("पूरा नाम", "Full name")}
+                      <span className="ml-0.5 text-destructive">*</span>
+                    </Label>
                     <Input
                       id="invite-name"
                       value={form.name}
@@ -486,7 +515,10 @@ export function UsersView() {
                     {formErrors.name ? <p className="text-[11.5px] text-destructive">{formErrors.name}</p> : null}
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="invite-email">{t("ईमेल", "Email")}</Label>
+                    <Label htmlFor="invite-email">
+                      {t("ईमेल", "Email")}
+                      <span className="ml-0.5 text-destructive">*</span>
+                    </Label>
                     <Input
                       id="invite-email"
                       type="email"
@@ -497,28 +529,49 @@ export function UsersView() {
                     {formErrors.email ? <p className="text-[11.5px] text-destructive">{formErrors.email}</p> : null}
                   </div>
                   <div className="space-y-1.5">
-                    <Label>{t("रोल", "Role")}</Label>
-                    <Select value={form.role} onValueChange={(value) => setForm({ ...form, role: value as UserRole })}>
+                    <Label>
+                      {t("रोल", "Role")}
+                      <span className="ml-0.5 text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={form.role}
+                      onValueChange={(value) => setForm({ ...form, role: value as UserRole })}
+                      disabled={!canManageUsers}
+                    >
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {allRoles.map((role) => (
+                        {/* An admin staffs their own desk with reporters; the
+                            API refuses anything more, so the menu says so
+                            rather than letting them hit the wall. */}
+                        {(canManageUsers ? allRoles : (["reporter"] as UserRole[])).map((role) => (
                           <SelectItem key={role} value={role}>
                             {t(roleLabels[role].name, roleLabels[role].nameEn)}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {!canManageUsers ? (
+                      <p className="text-[11px] text-text-muted">
+                        {t(
+                          "आप रिपोर्टर जोड़ सकते हैं। इससे ऊपर के लिए एडमिनिस्ट्रेटर से कहिए।",
+                          "You can add reporters. Ask an administrator for anything above that.",
+                        )}
+                      </p>
+                    ) : null}
                     {formErrors.role ? <p className="text-[11.5px] text-destructive">{formErrors.role}</p> : null}
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="invite-password">{t("पासवर्ड (वैकल्पिक)", "Password (optional)")}</Label>
+                    <Label htmlFor="invite-password">
+                      {t("पासवर्ड", "Password")}
+                      <span className="ml-0.5 text-destructive">*</span>
+                    </Label>
                     <Input
                       id="invite-password"
                       value={form.password}
                       onChange={(event) => setForm({ ...form, password: event.target.value })}
-                      placeholder={t("खाली = इनवाइट लिंक", "Empty = invite link")}
+                      placeholder={t("कम से कम 8 अक्षर, एक अंक", "At least 8 characters with a digit")}
                     />
                     {formErrors.password ? (
                       <p className="text-[11.5px] text-destructive">{formErrors.password}</p>
@@ -527,9 +580,20 @@ export function UsersView() {
                 </div>
               </section>
 
-              {/* Everything below is optional — it can be filled in later, by
-                  an administrator or by the person themselves. */}
-              <UserProfileFields value={profile} errors={formErrors} onChange={setProfile} />
+              <AvatarUpload
+                name={form.name}
+                url={profile.avatarUrl}
+                onChange={(url) => setProfile({ ...profile, avatarUrl: url })}
+              />
+
+              {/* Starred fields are required: the newsroom wants a complete
+                  record from day one. The rest can be filled in later. */}
+              <UserProfileFields
+                value={profile}
+                errors={formErrors}
+                onChange={setProfile}
+                mode="create"
+              />
             </div>
           </ScrollArea>
           <DialogFooter>

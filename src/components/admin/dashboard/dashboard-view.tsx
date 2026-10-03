@@ -95,7 +95,7 @@ export function DashboardView({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {isReporter ? (
           <>
             <StatCard
@@ -174,7 +174,7 @@ export function DashboardView({
         )}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <TrafficChart data={traffic} trackingSince={trafficSince} />
         <CategoryChart data={breakdown} />
       </div>

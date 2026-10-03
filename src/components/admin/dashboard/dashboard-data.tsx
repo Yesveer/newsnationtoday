@@ -86,7 +86,7 @@ export function DashboardData() {
     return (
       <div className="flex flex-col gap-4">
         <Skeleton className="h-16 w-80" />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-24 w-full" />
           ))}

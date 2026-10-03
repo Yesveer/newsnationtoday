@@ -62,17 +62,35 @@ export function translateBootstrapScript(
   const included = includedLanguages.length > 0 ? includedLanguages.join(",") : defaultLanguage;
 
   return `(function(){
-/* Google Translate rewrites the page's text nodes in place. React still holds
-   references to the originals, so the next re-render calls removeChild on a
-   node that now has a different parent and the whole tree unmounts with
-   "NotFoundError: The node to be removed is not a child of this node".
-   Nothing in React can prevent that from the outside, so the two DOM calls it
-   affects are made tolerant: if the node has already been moved, do the right
-   thing instead of throwing. This is the only reason these are patched. */
+/* Google Translate rewrites the page's text nodes in place.
+
+   It wraps each one in a <font> element, so a node React still holds a
+   reference to is no longer a child of the parent React thinks it is. The
+   next re-render then calls removeChild on the wrong parent and the whole
+   tree unmounts with "NotFoundError: The node to be removed is not a child
+   of this node". Nothing in React can prevent that from the outside.
+
+   So the two DOM calls it affects are made wrapper-aware: when the node has
+   been moved into a translation wrapper, operate on the wrapper, which is
+   where the translated text actually lives. Removing the node alone would
+   leave that wrapper behind — which is what makes a <select> show the old
+   value and the new one stacked on top of each other. */
 try{
+  var wrapperIn=function(node,parent){
+    /* the <font> (or nested <font>) that holds this node, if it sits
+       directly under the parent React is addressing */
+    var hop=node&&node.parentNode;
+    for(var depth=0;hop&&depth<3;depth++){
+      if(hop.parentNode===parent)return hop;
+      hop=hop.parentNode;
+    }
+    return null;
+  };
   var removeChild=Node.prototype.removeChild;
   Node.prototype.removeChild=function(child){
-    if(child.parentNode!==this){
+    if(child&&child.parentNode!==this){
+      var wrapper=wrapperIn(child,this);
+      if(wrapper)return removeChild.call(this,wrapper)&&child;
       if(child.parentNode)return removeChild.call(child.parentNode,child);
       return child;
     }
@@ -81,6 +99,8 @@ try{
   var insertBefore=Node.prototype.insertBefore;
   Node.prototype.insertBefore=function(node,before){
     if(before&&before.parentNode!==this){
+      var wrapper=wrapperIn(before,this);
+      if(wrapper)return insertBefore.call(this,node,wrapper);
       if(before.parentNode)return insertBefore.call(before.parentNode,node,before);
       return this.appendChild(node);
     }

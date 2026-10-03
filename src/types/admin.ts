@@ -48,6 +48,7 @@ export interface AdminUser {
   employeeId?: string;
   dateOfBirth?: string;
   gender?: string;
+  bloodGroup?: string;
   bio?: string;
   address?: UserAddress;
   identity?: UserIdentity;

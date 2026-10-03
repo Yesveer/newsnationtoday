@@ -124,7 +124,7 @@ export function AuditLogsView() {
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard
           label={t("कुल इवेंट", "Total events")}
           value={totals.all}

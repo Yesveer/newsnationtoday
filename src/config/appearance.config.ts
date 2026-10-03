@@ -100,7 +100,7 @@ export const defaultAppearance: AppearanceSettings = {
     siteName: siteConfig.name,
     tagline: siteConfig.tagline,
     logoUrl: "/logo-nnt.png",
-    logoSize: 34,
+    logoSize: 26,
     showNameUnderLogo: true,
     animateLogo: true,
   },

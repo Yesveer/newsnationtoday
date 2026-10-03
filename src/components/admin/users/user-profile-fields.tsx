@@ -7,16 +7,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAdminLang } from "@/components/admin/use-admin-lang";
 import type { UserProfileInput } from "@/lib/api/admin";
 
-/** Everything about a person beyond name, email and role — all optional.
+/** Matches the list the API accepts. It goes on the press card beside the
+ *  emergency contact, so it is a pick, never free text. */
+const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
+/** Everything about a person beyond name, email and role.
  *
  *  Shared by the "add user" dialog, the user detail page and a person's own
- *  profile, so the same fields are collected wherever they are filled in. */
+ *  profile, so the same fields are collected wherever they are filled in.
+ *  `mode` decides what is required and what is frozen:
+ *
+ *    create       — phone, Aadhaar and the emergency contact are required
+ *    self         — the person's own page: ID numbers and the emergency
+ *                   contact are the personnel record and are read-only
+ *    admin        — an administrator editing someone else: everything open
+ *
+ *  The staff ID is never editable in any mode; the server issues it. */
 export function UserProfileFields({
   value,
   errors = {},
   onChange,
   showIdentity = true,
   identityMasked = false,
+  mode = "admin",
 }: {
   value: UserProfileInput;
   errors?: Record<string, string>;
@@ -24,8 +37,11 @@ export function UserProfileFields({
   showIdentity?: boolean;
   /** When true the ID numbers shown are masked, so typing replaces them. */
   identityMasked?: boolean;
+  mode?: "create" | "self" | "admin";
 }) {
   const { t } = useAdminLang();
+  const creating = mode === "create";
+  const frozen = mode === "self";
 
   const set = (partial: UserProfileInput) => onChange({ ...value, ...partial });
   const setAddress = (partial: UserProfileInput["address"]) =>
@@ -42,10 +58,22 @@ export function UserProfileFields({
     onInput: (next: string) => void,
     placeholder?: string,
     errorKey?: string,
+    options?: { required?: boolean; readOnly?: boolean },
   ) => (
     <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <Input id={id} value={current ?? ""} onChange={(event) => onInput(event.target.value)} placeholder={placeholder} />
+      <Label htmlFor={id}>
+        {label}
+        {options?.required ? <span className="ml-0.5 text-destructive">*</span> : null}
+      </Label>
+      <Input
+        id={id}
+        value={current ?? ""}
+        onChange={(event) => onInput(event.target.value)}
+        placeholder={placeholder}
+        readOnly={options?.readOnly}
+        aria-readonly={options?.readOnly}
+        className={options?.readOnly ? "cursor-not-allowed bg-surface-muted text-text-muted" : undefined}
+      />
       {errors[errorKey ?? id] ? (
         <p className="text-[11.5px] text-destructive">{errors[errorKey ?? id]}</p>
       ) : null}
@@ -59,7 +87,8 @@ export function UserProfileFields({
           {t("संपर्क", "Contact")}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
-          {field("phone", t("फ़ोन", "Phone"), value.phone, (next) => set({ phone: next }), "+91 98110 00000")}
+          {field("phone", t("फ़ोन", "Phone"), value.phone, (next) => set({ phone: next }), "+91 98110 00000",
+            "phone", { required: true })}
           {field("altPhone", t("दूसरा फ़ोन", "Alternate phone"), value.altPhone, (next) => set({ altPhone: next }))}
         </div>
       </section>
@@ -77,7 +106,20 @@ export function UserProfileFields({
             (next) => set({ reportingArea: next }),
             t("जैसे: लखनऊ", "e.g. Lucknow"),
           )}
-          {field("employeeId", t("कर्मचारी आईडी", "Employee ID"), value.employeeId, (next) => set({ employeeId: next }), "NNT-101")}
+          <div className="space-y-1.5">
+            <Label htmlFor="employeeId">{t("कर्मचारी आईडी", "Employee ID")}</Label>
+            <Input
+              id="employeeId"
+              value={value.employeeId ?? ""}
+              readOnly
+              aria-readonly
+              className="cursor-not-allowed bg-surface-muted font-mono text-text-muted"
+              placeholder={creating ? t("सेव करते ही अपने आप बनेगी", "Issued automatically on save") : "—"}
+            />
+            <p className="text-[11px] text-text-muted">
+              {t("यह अपने आप बनती है और बदली नहीं जा सकती।", "Issued by the system — it cannot be changed.")}
+            </p>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="gender">{t("लिंग", "Gender")}</Label>
             <Select value={value.gender || "unset"} onValueChange={(next) => set({ gender: next === "unset" ? "" : next })}>
@@ -91,6 +133,32 @@ export function UserProfileFields({
                 <SelectItem value="other">{t("अन्य", "Other")}</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bloodGroup">
+              {t("ब्लड ग्रुप", "Blood group")}
+              {creating ? <span className="ml-0.5 text-destructive">*</span> : null}
+            </Label>
+            <Select
+              value={value.bloodGroup || "unset"}
+              onValueChange={(next) => set({ bloodGroup: next === "unset" ? "" : next })}
+              disabled={frozen}
+            >
+              <SelectTrigger id="bloodGroup" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">{t("चुनें", "Select")}</SelectItem>
+                {BLOOD_GROUPS.map((group) => (
+                  <SelectItem key={group} value={group}>
+                    {group}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.bloodGroup ? (
+              <p className="text-[11.5px] text-destructive">{errors.bloodGroup}</p>
+            ) : null}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="dateOfBirth">{t("जन्म तिथि", "Date of birth")}</Label>
@@ -149,6 +217,7 @@ export function UserProfileFields({
               (next) => setIdentity({ aadhaar: next }),
               identityMasked ? "••••••••1234" : "123412341234",
               "identity.aadhaar",
+              { required: creating, readOnly: frozen },
             )}
             {field(
               "pan",
@@ -157,6 +226,7 @@ export function UserProfileFields({
               (next) => setIdentity({ pan: next.toUpperCase() }),
               "ABCDE1234F",
               "identity.pan",
+              { readOnly: frozen },
             )}
             {field(
               "passport",
@@ -165,6 +235,7 @@ export function UserProfileFields({
               (next) => setIdentity({ passport: next.toUpperCase() }),
               "A1234567",
               "identity.passport",
+              { readOnly: frozen },
             )}
           </div>
           <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11.5px] text-amber-700 dark:text-amber-400">
@@ -179,11 +250,21 @@ export function UserProfileFields({
       <section className="space-y-3">
         <p className="text-[11px] font-semibold tracking-wide text-text-muted uppercase">
           {t("आपातकालीन संपर्क", "Emergency contact")}
+          {creating ? <span className="ml-0.5 text-destructive">*</span> : null}
         </p>
+        {frozen ? (
+          <p className="rounded-lg border border-border bg-surface-muted/60 px-3 py-2 text-[11.5px] text-text-muted">
+            {t(
+              "यह रिकॉर्ड का हिस्सा है — बदलवाने के लिए एडमिनिस्ट्रेटर से कहिए।",
+              "This is part of your personnel record — ask an administrator to change it.",
+            )}
+          </p>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-3">
-          {field("ec-name", t("नाम", "Name"), value.emergencyContact?.name, (next) => setEmergency({ name: next }))}
+          {field("ec-name", t("नाम", "Name"), value.emergencyContact?.name, (next) => setEmergency({ name: next }),
+            undefined, "emergencyContact.name", { required: creating, readOnly: frozen })}
           {field("ec-relation", t("रिश्ता", "Relation"), value.emergencyContact?.relation, (next) =>
-            setEmergency({ relation: next }),
+            setEmergency({ relation: next }), undefined, "emergencyContact.relation", { readOnly: frozen },
           )}
           {field(
             "ec-phone",
@@ -192,6 +273,7 @@ export function UserProfileFields({
             (next) => setEmergency({ phone: next }),
             undefined,
             "emergencyContact.phone",
+            { required: creating, readOnly: frozen },
           )}
         </div>
       </section>

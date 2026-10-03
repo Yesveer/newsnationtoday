@@ -77,7 +77,7 @@ export function AnimatedLogo({ size, className }: { size?: number; className?: s
       {brand.showNameUnderLogo ? (
         // `notranslate` keeps Google's translator from mangling the brand name.
         <span
-          className="notranslate text-[9px] leading-none font-bold tracking-[0.08em] whitespace-nowrap text-text uppercase sm:text-[11px] sm:tracking-[0.12em]"
+          className="notranslate font-display text-[12px] leading-none font-extrabold tracking-[0.06em] whitespace-nowrap text-text uppercase sm:text-[15px] sm:tracking-[0.1em]"
           translate="no"
         >
           {brand.siteName || siteConfig.name}

@@ -269,6 +269,7 @@ export function CategoriesView({ counts }: { counts: Record<string, number> }) {
                         variant="ghost"
                         size="icon-xs"
                         disabled={index === 0}
+                        className="size-9 sm:size-6"
                         onClick={() => void move(index, -1)}
                         aria-label={t("ऊपर", "Move up")}
                       >
@@ -278,6 +279,7 @@ export function CategoriesView({ counts }: { counts: Record<string, number> }) {
                         variant="ghost"
                         size="icon-xs"
                         disabled={index === rows.length - 1}
+                        className="size-9 sm:size-6"
                         onClick={() => void move(index, 1)}
                         aria-label={t("नीचे", "Move down")}
                       >

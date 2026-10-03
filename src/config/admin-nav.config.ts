@@ -59,7 +59,7 @@ export const adminNavGroups: AdminNavGroup[] = [
         permissions: ["news.delete", "news.review"],
         badgeKey: "requests",
       },
-      { href: "/admin/users", label: "यूज़र मैनेजमेंट", labelEn: "Users", icon: "users", permissions: ["users.manage"] },
+      { href: "/admin/users", label: "यूज़र मैनेजमेंट", labelEn: "Users", icon: "users", permissions: ["users.create.reporter"] },
       { href: "/admin/audit-logs", label: "ऑडिट लॉग", labelEn: "Audit logs", icon: "audit", permissions: ["audit.view"] },
     ],
   },

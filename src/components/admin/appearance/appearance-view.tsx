@@ -238,11 +238,13 @@ export function AppearanceView() {
                 <CardDescription>{t("हेडर, फ़ेविकॉन और शेयर कार्ड पर यही दिखेगा।", "This shows in the header, favicon and share cards.")}</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3 pt-0">
-                <div className="flex items-center gap-4 rounded-lg border border-border p-3">
+                {/* The 128px preview plus the upload button do not fit side
+                    by side on a phone, so they stack there. */}
+                <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:gap-4">
                   <span className="relative block h-16 w-32 shrink-0 rounded bg-surface-muted">
                     <Image src={settings.brand.logoUrl} alt="logo" fill className="object-contain p-1.5" sizes="128px" />
                   </span>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex min-w-0 flex-col gap-2">
                     <input
                       ref={logoInput}
                       type="file"

@@ -112,7 +112,7 @@ export function CategoryLinks({
       {items.map((category) => {
           const Icon = categoryIcons[category.slug] ?? IconFlame;
           const active = category.slug === activeSlug;
-          const isNew = "isNew" in category ? Boolean(category.isNew) : false;
+          const isNew = Boolean(category.isNew);
           return (
             <Link
               key={category.slug}

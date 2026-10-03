@@ -205,7 +205,7 @@ export function ReviewQueueView() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard
           label={t("रिव्यू बाकी", "Waiting for review")}
           value={counts?.pending ?? 0}

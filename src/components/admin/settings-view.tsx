@@ -42,6 +42,9 @@ export function SettingsView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState("general");
+  // Tabs that write through this page's own Save button.
+  const ownsSave = !["email", "media"].includes(tab);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -111,10 +114,15 @@ export function SettingsView() {
           "The site's identity, contact details, social links and SEO — all in one place.",
         )}
         actions={
-          <Button size="sm" disabled={saving || loading} onClick={() => void save()}>
-            <IconDeviceFloppy className="size-4" />
-            {saving ? t("सेव हो रहा है…", "Saving…") : t("सेव करें", "Save")}
-          </Button>
+          // The Email and Media panels have their own Save and write to their
+          // own endpoints. Showing this one next to them meant a filled-in
+          // Cloudinary form could be "saved" by a button that never sends it.
+          ownsSave ? (
+            <Button size="sm" disabled={saving || loading} onClick={() => void save()}>
+              <IconDeviceFloppy className="size-4" />
+              {saving ? t("सेव हो रहा है…", "Saving…") : t("सेव करें", "Save")}
+            </Button>
+          ) : null
         }
       />
 
@@ -125,7 +133,7 @@ export function SettingsView() {
       ) : null}
 
       {loading ? <Skeleton className="h-[420px] w-full" /> : (
-      <Tabs defaultValue="general">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex w-full flex-wrap justify-start gap-1 rounded-lg">
           <TabsTrigger value="general" className="rounded-md text-[13px]">{t("सामान्य", "General")}</TabsTrigger>
           <TabsTrigger value="social" className="rounded-md text-[13px]">{t("सोशल", "Social")}</TabsTrigger>

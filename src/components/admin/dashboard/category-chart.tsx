@@ -23,13 +23,13 @@ export function CategoryChart({ data }: { data: { category: string; views: numbe
   });
 
   return (
-    <Card className="gap-4">
+    <Card className="min-w-0 gap-4">
       <CardHeader>
         <CardTitle className="font-display text-base font-bold">{t("टॉप कैटेगरी", "Top categories")}</CardTitle>
         <CardDescription>{t("किस सेक्शन पर सबसे ज़्यादा पढ़ा गया", "Which section gets read the most")}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[240px] w-full">
+      <CardContent className="min-w-0">
+        <ChartContainer config={chartConfig} className="h-[240px] w-full min-w-0">
           <BarChart data={rows} layout="vertical" margin={{ left: 8, right: 12 }}>
             <CartesianGrid horizontal={false} strokeDasharray="3 3" />
             <XAxis type="number" hide />

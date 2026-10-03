@@ -325,10 +325,10 @@ export function NewsTableView({
                 <TableHead className="w-10">
                   <Checkbox checked={allOnPageSelected} onCheckedChange={toggleAll} aria-label={t("सभी चुनें", "Select all")} />
                 </TableHead>
-                <TableHead className="min-w-[280px]">{t("खबर", "Story")}</TableHead>
+                <TableHead className="min-w-0 sm:min-w-[280px]">{t("खबर", "Story")}</TableHead>
                 <TableHead className="hidden md:table-cell">{t("कैटेगरी", "Category")}</TableHead>
                 <TableHead className="hidden lg:table-cell">{t("रिपोर्टर", "Reporter")}</TableHead>
-                <TableHead>{t("स्थिति", "Status")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("स्थिति", "Status")}</TableHead>
                 <TableHead className="hidden sm:table-cell text-right">{t("व्यूज़", "Views")}</TableHead>
                 <TableHead className="hidden xl:table-cell">{t("अपडेट", "Updated")}</TableHead>
                 <TableHead className="w-10" />
@@ -363,7 +363,7 @@ export function NewsTableView({
                         aria-label={t("चुनें", "Select")}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-normal">
                       <div className="flex items-start gap-2.5">
                         <span className="relative hidden h-11 w-16 shrink-0 overflow-hidden rounded-md bg-surface-muted sm:block">
                           <Image src={item.coverImageUrl} alt="" fill className="object-cover" sizes="64px" />
@@ -375,6 +375,15 @@ export function NewsTableView({
                           >
                             {item.title}
                           </Link>
+                          {/* The columns a phone has no room for — status,
+                              reporter, when — ride along under the headline
+                              instead of hiding behind a sideways scroll. */}
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
+                            <StatusBadge status={item.status} />
+                            <span className="text-[11px] text-text-muted">
+                              {item.authorName} · {formatRelative(item.updatedAt, language)}
+                            </span>
+                          </div>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-text-muted">
                             <span className="rounded bg-surface-muted px-1.5 py-0.5">
                               {item.type === "video"
@@ -405,7 +414,7 @@ export function NewsTableView({
                     <TableCell className="hidden lg:table-cell text-[12.5px] text-text-muted">
                       {item.authorName}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <StatusBadge status={item.status} />
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-right text-[12.5px] tabular-nums text-text-muted">

@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { IconCamera, IconDeviceFloppy, IconLock } from "@tabler/icons-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { IconDeviceFloppy, IconLock } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +12,8 @@ import { PageHeader } from "@/components/admin/page-header";
 import { RoleBadge } from "@/components/admin/role-badge";
 import { useAdminAuth, useAdminSession } from "@/components/admin/admin-session";
 import { UserProfileFields } from "@/components/admin/users/user-profile-fields";
+import { AvatarUpload } from "@/components/admin/users/avatar-upload";
+import { DigitalIdCard } from "@/components/admin/users/digital-id-card";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/admin";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
@@ -24,7 +25,6 @@ export function ProfileView() {
   const { user, role } = useAdminSession();
   const { t, language } = useAdminLang();
   const { reload } = useAdminAuth();
-  const [profile, setProfile] = useState({ name: user.name });
   // Everything optional lives in one object, shared with the admin's own form.
   const [details, setDetails] = useState<api.UserProfileInput>({
     phone: user.phone,
@@ -32,8 +32,10 @@ export function ProfileView() {
     desk: user.desk,
     reportingArea: user.reportingArea,
     employeeId: user.employeeId,
+    avatarUrl: user.avatarUrl,
     dateOfBirth: user.dateOfBirth,
     gender: user.gender,
+    bloodGroup: user.bloodGroup,
     bio: user.bio,
     address: user.address,
     identity: user.identity,
@@ -49,7 +51,9 @@ export function ProfileView() {
     setSavingProfile(true);
     setProfileErrors({});
     try {
-      await api.updateProfile({ ...details, name: profile.name });
+      // Name, email, role, the ID numbers and the emergency contact are the
+      // personnel record — the API refuses them here, so they are not sent.
+      await api.updateProfile(details);
       await reload();
       toast.success(t("प्रोफ़ाइल सेव हो गई", "Profile saved"));
     } catch (error) {
@@ -110,41 +114,34 @@ export function ProfileView() {
               <CardTitle className="font-display text-base font-bold">{t("बुनियादी जानकारी", "Basic details")}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 pt-0">
-              <div className="flex items-center gap-4">
-                <Avatar className="size-16">
-                  <AvatarImage src={user.avatarUrl} alt={user.name} />
-                  <AvatarFallback>{user.name.slice(0, 1)}</AvatarFallback>
-                </Avatar>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toast.success(t("फोटो अपलोडर", "Photo uploader"), { description: t("जल्द", "Coming soon") })}
-                >
-                  <IconCamera className="size-4" /> {t("फोटो बदलें", "Change photo")}
-                </Button>
-              </div>
+              <AvatarUpload
+                name={user.name}
+                url={details.avatarUrl}
+                onChange={(url) => setDetails({ ...details, avatarUrl: url })}
+              />
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="profile-name">{t("नाम", "Name")}</Label>
-                  <Input
-                    id="profile-name"
-                    value={profile.name}
-                    onChange={(event) => setProfile({ ...profile, name: event.target.value })}
-                  />
-                  {profileErrors.name ? (
-                    <p className="text-[11.5px] text-destructive">{profileErrors.name}</p>
-                  ) : null}
+                  <Input id="profile-name" value={user.name} readOnly disabled />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="profile-email">{t("ईमेल", "Email")}</Label>
                   <Input id="profile-email" value={user.email} readOnly disabled />
-                  <p className="text-[11px] text-text-muted">
-                    {t("ईमेल सिर्फ़ एडमिनिस्ट्रेटर बदल सकता है।", "Only an administrator can change the email.")}
-                  </p>
                 </div>
               </div>
+              <p className="rounded-lg border border-border bg-surface-muted/60 px-3 py-2 text-[11.5px] text-text-muted">
+                {t(
+                  "नाम, ईमेल, रोल, आधार और आपातकालीन संपर्क रिकॉर्ड का हिस्सा हैं — बदलवाने के लिए एडमिनिस्ट्रेटर से कहिए। फ़ोन, फ़ोटो, पता और परिचय आप खुद बदल सकते हैं।",
+                  "Name, email, role, Aadhaar and the emergency contact are part of your personnel record — ask an administrator to change them. Phone, photo, address and bio are yours to edit.",
+                )}
+              </p>
 
-              <UserProfileFields value={details} errors={profileErrors} onChange={setDetails} />
+              <UserProfileFields
+                value={details}
+                errors={profileErrors}
+                onChange={setDetails}
+                mode="self"
+              />
             </CardContent>
           </Card>
 
@@ -237,6 +234,8 @@ export function ProfileView() {
         </div>
 
         <div className="flex flex-col gap-4">
+          <DigitalIdCard user={user} />
+
           <Card>
             <CardHeader>
               <CardTitle className="font-display text-base font-bold">{t("आपका रोल", "Your role")}</CardTitle>

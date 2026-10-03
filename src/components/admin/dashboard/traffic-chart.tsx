@@ -44,15 +44,15 @@ export function TrafficChart({
       );
 
   return (
-    <Card className="gap-4">
+    <Card className="min-w-0 gap-4">
       <CardHeader>
         <CardTitle className="font-display text-base font-bold">
           {t("ट्रैफ़िक — पिछले 14 दिन", "Traffic — last 14 days")}
         </CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[240px] w-full">
+      <CardContent className="min-w-0">
+        <ChartContainer config={chartConfig} className="h-[240px] w-full min-w-0">
           <AreaChart data={data} margin={{ left: 4, right: 8, top: 4 }}>
             <defs>
               <linearGradient id="fillViews" x1="0" y1="0" x2="0" y2="1">

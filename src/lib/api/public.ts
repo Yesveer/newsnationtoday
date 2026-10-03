@@ -84,6 +84,7 @@ function toCategory(category: ApiCategory): Category {
     color: category.color,
     iconUrl: category.iconUrl,
     order: category.order,
+    isNew: category.isNew,
     parentId: null,
     createdAt: category.createdAt,
     updatedAt: category.updatedAt,
