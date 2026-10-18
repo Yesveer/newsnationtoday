@@ -55,7 +55,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Script id="translate-bootstrap" strategy="beforeInteractive">
           {translateBootstrapScript(
             languages.default,
-            languages.source,
             languages.items.filter((item) => item.enabled !== false).map((item) => item.code),
           )}
         </Script>

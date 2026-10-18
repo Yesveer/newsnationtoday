@@ -25,6 +25,7 @@ import { useAdminLang } from "@/components/admin/use-admin-lang";
 import { useAdminSession } from "@/components/admin/admin-session";
 import { SmtpSettingsPanel } from "@/components/admin/smtp-settings";
 import { StorageSettingsPanel } from "@/components/admin/storage-settings";
+import { SocialSettingsPanel } from "@/components/admin/social-settings";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/admin";
@@ -44,7 +45,7 @@ export function SettingsView() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState("general");
   // Tabs that write through this page's own Save button.
-  const ownsSave = !["email", "media"].includes(tab);
+  const ownsSave = !["email", "media", "publishing"].includes(tab);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -146,6 +147,11 @@ export function SettingsView() {
           {can("users.manage") ? (
             <TabsTrigger value="media" className="rounded-md text-[13px]">
               <IconCloud className="size-3.5" /> {t("मीडिया", "Media")}
+            </TabsTrigger>
+          ) : null}
+          {can("settings.manage") ? (
+            <TabsTrigger value="publishing" className="rounded-md text-[13px]">
+              <IconBrandYoutube className="size-3.5" /> {t("सोशल मीडिया", "Social media")}
             </TabsTrigger>
           ) : null}
           <TabsTrigger value="advanced" className="rounded-md text-[13px]">{t("एडवांस", "Advanced")}</TabsTrigger>
@@ -307,6 +313,12 @@ export function SettingsView() {
         {can("users.manage") ? (
           <TabsContent value="media" className="mt-3">
             <StorageSettingsPanel />
+          </TabsContent>
+        ) : null}
+
+        {can("settings.manage") ? (
+          <TabsContent value="publishing" className="mt-3">
+            <SocialSettingsPanel />
           </TabsContent>
         ) : null}
 

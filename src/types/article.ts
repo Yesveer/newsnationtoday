@@ -39,6 +39,11 @@ export interface Article {
   isFeatured: boolean;
   isBreaking: boolean;
   isVideo?: boolean;
+  /** The story's video, when it leads with one instead of a photo. */
+  coverVideoUrl?: string;
+  /** The 9:16 cut, present only once the server has finished making it.
+   *  This is what the reels feed plays. */
+  reel?: { videoUrl: string; posterUrl?: string };
   videoDurationLabel?: string;
   /** Sub-topic within a category — a state, country or sport slug (see topics.config). */
   topic?: string;

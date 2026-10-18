@@ -49,9 +49,28 @@ export function ArticleHeader({ article }: { article: ArticleWithRelations }) {
         <ShareRail url={url} title={article.title} />
       </div>
 
-      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-surface-muted">
-        <Image src={article.coverImageUrl} alt={article.coverImageAlt} fill priority sizes="800px" className="object-cover" />
-      </div>
+      {/* A story leads with one thing. When that is a clip it has to be
+          playable here — a video cover used to fall through to the <Image>
+          below and the reader got a still, or nothing at all. */}
+      {article.coverVideoUrl ? (
+        <div className="overflow-hidden rounded-lg bg-black">
+          <video
+            src={article.coverVideoUrl}
+            poster={article.reel?.posterUrl || article.coverImageUrl || undefined}
+            controls
+            playsInline
+            preload="metadata"
+            className="max-h-[70svh] w-full bg-black object-contain"
+          >
+            {/* Shown only if the browser cannot play the file at all. */}
+            <a href={article.coverVideoUrl}>वीडियो डाउनलोड कीजिए</a>
+          </video>
+        </div>
+      ) : article.coverImageUrl ? (
+        <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-surface-muted">
+          <Image src={article.coverImageUrl} alt={article.coverImageAlt} fill priority sizes="800px" className="object-cover" />
+        </div>
+      ) : null}
     </header>
   );
 }

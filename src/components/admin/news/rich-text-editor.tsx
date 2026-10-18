@@ -8,6 +8,7 @@ import { Color } from "@tiptap/extension-color";
 import { Highlight } from "@tiptap/extension-highlight";
 import { TextAlign } from "@tiptap/extension-text-align";
 import { Image as TiptapImage } from "@tiptap/extension-image";
+import { StoryVideo } from "@/components/admin/news/video-node";
 import {
   IconAlignCenter,
   IconAlignLeft,
@@ -281,11 +282,15 @@ export function RichTextEditor({
   onChange,
   disabled,
   placeholder,
+  destination,
 }: {
   value: string;
   onChange: (html: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  /** Which news bucket an upload from inside the body goes to. Without it
+   *  the story's media ends up split across two buckets. */
+  destination?: string;
 }) {
   const { t } = useAdminLang();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -305,6 +310,7 @@ export function RichTextEditor({
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TiptapImage.configure({ HTMLAttributes: { class: "rounded-lg" } }),
+      StoryVideo,
     ],
     content: value || "",
     editorProps: {
@@ -337,9 +343,13 @@ export function RichTextEditor({
     editor?.setEditable(!disabled);
   }, [editor, disabled]);
 
-  const insertImage = useCallback(
+  const insertMedia = useCallback(
     (url: string, alt: string) => {
-      editor?.chain().focus().setImage({ src: url, alt }).run();
+      if (/\.(mp4|webm|mov|m4v|mkv|avi)(\?|$)/i.test(url)) {
+        editor?.chain().focus().setStoryVideo({ src: url }).run();
+      } else {
+        editor?.chain().focus().setImage({ src: url, alt }).run();
+      }
       setPickerOpen(false);
     },
     [editor],
@@ -535,7 +545,8 @@ export function RichTextEditor({
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         kind="news"
-        onSelect={(selected) => insertImage(selected.url, selected.name)}
+        destination={destination}
+        onSelect={(selected) => insertMedia(selected.url, selected.name)}
       />
     </div>
   );

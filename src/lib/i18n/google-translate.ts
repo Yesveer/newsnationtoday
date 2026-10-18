@@ -1,4 +1,4 @@
-import { DEFAULT_LANGUAGE, SOURCE_LANGUAGE } from "@/config/languages.config";
+import { DEFAULT_LANGUAGE } from "@/config/languages.config";
 
 /** Google's website translator is driven entirely by this cookie. Writing it
  *  and reloading is the only reliable way to switch language — poking the
@@ -20,8 +20,9 @@ export function readTranslateCookie(): string | null {
   return target || null;
 }
 
-export function writeTranslateCookie(target: string, source: string = SOURCE_LANGUAGE) {
-  const value = `/${source}/${target}`;
+/** `auto` rather than a declared source: see `applyTranslateTarget`. */
+export function writeTranslateCookie(target: string) {
+  const value = `/auto/${target}`;
   for (const domain of cookieDomains()) {
     document.cookie = `${COOKIE}=${value};path=/${domain};max-age=${60 * 60 * 24 * 365}`;
   }
@@ -33,11 +34,16 @@ export function clearTranslateCookie() {
   }
 }
 
-/** Point Google at `target`, or drop the cookie when the target *is* the
- *  language the site is written in (no translation needed). */
-export function applyTranslateTarget(target: string, source: string = SOURCE_LANGUAGE) {
-  if (target === source) clearTranslateCookie();
-  else writeTranslateCookie(target, source);
+/** Point Google at `target`, letting it detect what the page is written in.
+ *
+ *  This used to skip translating whenever the target matched the language
+ *  the newsroom was assumed to write in — picking हिंदी cleared the cookie
+ *  and nothing was translated at all. That assumption does not hold: a
+ *  reporter files a story in whatever language the story came in, so a page
+ *  declared Hindi is often English, and the reader who asked for Hindi got
+ *  English back. Detection per page costs nothing and is always right. */
+export function applyTranslateTarget(target: string) {
+  writeTranslateCookie(target);
 }
 
 /** Runs during HTML parsing, before anything else.
@@ -56,7 +62,6 @@ export function applyTranslateTarget(target: string, source: string = SOURCE_LAN
  *  configured. */
 export function translateBootstrapScript(
   defaultLanguage: string = DEFAULT_LANGUAGE,
-  source: string = SOURCE_LANGUAGE,
   includedLanguages: string[] = [],
 ): string {
   const included = includedLanguages.length > 0 ? includedLanguages.join(",") : defaultLanguage;
@@ -109,17 +114,21 @@ try{
 }catch(e){}
 try{
 var stored=localStorage.getItem("newshub-language")||${JSON.stringify(defaultLanguage)};
-var source=${JSON.stringify(source)};
 var host=location.hostname;
 var domains=(host==="localhost"||/^[\\d.]+$/.test(host))?[""]:["",";domain="+host,";domain=."+host];
+/* "auto", not a fixed source language. A reporter writes a story in
+   whatever language the story came in; declaring the whole page Hindi
+   told Google an English story was already Hindi, so it left it alone
+   and only the chrome changed. Detection is per page, which is the
+   granularity that actually matches how the newsroom files copy. */
 for(var i=0;i<domains.length;i++){
-  document.cookie="googtrans="+(stored===source?"":"/"+source+"/"+stored)+";path=/"+domains[i]+";max-age="+(stored===source?0:31536000);
+  document.cookie="googtrans=/auto/"+stored+";path=/"+domains[i]+";max-age=31536000";
 }
 }catch(e){}
 window.googleTranslateElementInit=function(){
   if(!window.google||!window.google.translate)return;
   new window.google.translate.TranslateElement({
-    pageLanguage:${JSON.stringify(source)},
+    pageLanguage:"auto",
     includedLanguages:${JSON.stringify(included)},
     autoDisplay:false
   },"google_translate_element");

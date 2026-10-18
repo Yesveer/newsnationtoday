@@ -19,17 +19,50 @@ import { useAdminLang } from "@/components/admin/use-admin-lang";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/admin";
 
+/** What a caller is willing to receive. A cover image slot that accepts a
+ *  video ends up with an `<img>` pointing at an .mp4, which renders as
+ *  nothing on the website — so the picker filters rather than trusting the
+ *  person to avoid the wrong tile. */
+export type MediaAccept = "image" | "video" | "all";
+
+const ACCEPT_ATTRIBUTE: Record<MediaAccept, string> = {
+  image: "image/*",
+  video: "video/*",
+  all: "image/*,video/*",
+};
+
+function isVideo(mimeType: string): boolean {
+  return mimeType.startsWith("video/");
+}
+
+function matchesAccept(asset: api.MediaAsset, accept: MediaAccept): boolean {
+  if (accept === "all") return true;
+  // An asset saved before mime types were recorded falls back to its
+  // extension rather than disappearing from the library.
+  const video = asset.mimeType
+    ? isVideo(asset.mimeType)
+    : /\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(asset.url);
+  return accept === "video" ? video : !video;
+}
+
 /** Pick a file from the newsroom's library, or upload a new one right here.
  *  Story images go to the news storage profile. */
 export function MediaPickerDialog({
   open,
   onOpenChange,
   kind = "news",
+  accept = "all",
+  destination,
   onSelect,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   kind?: api.AssetKind;
+  accept?: MediaAccept;
+  /** Which news bucket an upload lands in. Omitted, the server picks the
+   *  default — which is wrong whenever the reporter chose another one for
+   *  the story, and splits one story's media across two buckets. */
+  destination?: string;
   onSelect: (asset: { url: string; name: string }) => void;
 }) {
   const { t } = useAdminLang();
@@ -42,11 +75,11 @@ export function MediaPickerDialog({
   const fetchAssets = useCallback(async () => {
     try {
       const page = await api.listMedia({ kind, search: query, limit: 60 });
-      return page.items;
+      return page.items.filter((asset) => matchesAccept(asset, accept));
     } catch {
       return [] as api.MediaAsset[];
     }
-  }, [kind, query]);
+  }, [kind, query, accept]);
 
   useEffect(() => {
     if (!open) return;
@@ -66,9 +99,17 @@ export function MediaPickerDialog({
   }, [open, fetchAssets, query]);
 
   const upload = async (file: File) => {
+    if (!matchesAccept({ mimeType: file.type, url: file.name } as api.MediaAsset, accept)) {
+      toast.error(
+        accept === "image"
+          ? t("यहाँ सिर्फ़ इमेज लग सकती है।", "Only an image can go here.")
+          : t("यहाँ सिर्फ़ वीडियो लग सकता है।", "Only a video can go here."),
+      );
+      return;
+    }
     setUploading(true);
     try {
-      const asset = await api.uploadMedia(file, kind);
+      const asset = await api.uploadMedia(file, kind, undefined, destination);
       toast.success(t("अपलोड हो गया", "Uploaded"));
       onSelect({ url: asset.url, name: asset.name });
     } catch (error) {
@@ -87,10 +128,15 @@ export function MediaPickerDialog({
         <DialogHeader>
           <DialogTitle>{t("मीडिया लाइब्रेरी", "Media library")}</DialogTitle>
           <DialogDescription>
-            {t(
-              "कवर इमेज चुनिए या नई अपलोड कीजिए — यही वेबसाइट के कार्ड पर दिखेगी।",
-              "Pick a cover image or upload a new one — it shows on the website's cards.",
-            )}
+            {accept === "video"
+              ? t(
+                  "वीडियो चुनिए या नया अपलोड कीजिए।",
+                  "Pick a video or upload a new one.",
+                )
+              : t(
+                  "कवर इमेज चुनिए या नई अपलोड कीजिए — यही वेबसाइट के कार्ड पर दिखेगी।",
+                  "Pick a cover image or upload a new one — it shows on the website's cards.",
+                )}
           </DialogDescription>
         </DialogHeader>
 
@@ -107,7 +153,7 @@ export function MediaPickerDialog({
           <input
             ref={fileInput}
             type="file"
-            accept="image/*,video/*"
+            accept={ACCEPT_ATTRIBUTE[accept]}
             className="hidden"
             onChange={(event) => {
               const file = event.target.files?.[0];
@@ -138,14 +184,26 @@ export function MediaPickerDialog({
                   className="group flex flex-col gap-1 overflow-hidden rounded-lg border border-border text-left transition-colors hover:border-accent"
                 >
                   <span className="relative block aspect-[4/3] w-full overflow-hidden bg-surface-muted">
-                    <Image
-                      src={asset.url}
-                      alt={asset.name}
-                      fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      sizes="200px"
-                      unoptimized
-                    />
+                    {isVideo(asset.mimeType) ? (
+                      // A video tile drawn as an <img> is a broken icon; the
+                      // first frame is what makes it recognisable.
+                      <video
+                        src={asset.url}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="size-full bg-black object-cover"
+                      />
+                    ) : (
+                      <Image
+                        src={asset.url}
+                        alt={asset.name}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        sizes="200px"
+                        unoptimized
+                      />
+                    )}
                   </span>
                   <span className="truncate px-2 pb-1.5 text-[11px] text-text-muted">{asset.name}</span>
                 </button>

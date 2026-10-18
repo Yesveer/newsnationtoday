@@ -33,7 +33,9 @@ export function AdminCommandMenu({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
+      // Autofill and IME composition dispatch keydown events with no `key`,
+      // and this listener is on document, so it sees every one of them.
+      if (event.key?.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         setOpen((value) => !value);
       }

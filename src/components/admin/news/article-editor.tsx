@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import {
   IconArrowUpRight,
   IconBolt,
+  IconBrandYoutube,
   IconCalendarClock,
   IconChevronDown,
   IconDeviceFloppy,
@@ -20,7 +21,10 @@ import {
   IconSparkles,
   IconStar,
   IconUserCheck,
+  IconCloud,
+  IconDeviceMobile,
   IconTrash,
+  IconVideo,
   IconX,
 } from "@tabler/icons-react";
 import {
@@ -34,7 +38,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -67,6 +77,9 @@ import { MediaPickerDialog } from "@/components/admin/media/media-picker-dialog"
 import { RichTextEditor } from "@/components/admin/news/rich-text-editor";
 import { SocialLinksField } from "@/components/admin/news/social-links-field";
 import { ReviewerPicker } from "@/components/admin/news/reviewer-picker";
+import { MediaUrlField } from "@/components/admin/news/media-url-field";
+import { ReelStatus } from "@/components/admin/news/reel-status";
+import { YouTubeStatus } from "@/components/admin/news/youtube-status";
 import { useAdminSession } from "@/components/admin/admin-session";
 import { useAdminLang } from "@/components/admin/use-admin-lang";
 import { formatDateTime } from "@/lib/admin/format";
@@ -129,17 +142,18 @@ const makeEditorSchema = (t: (hi: string, en: string) => string) =>
         "The story body needs at least 50 characters",
       ),
     }),
-    coverImageUrl: z
-      .string()
-      .min(5, t("कवर इमेज ज़रूरी है", "A cover image is required")),
+    coverImageUrl: z.string().optional(),
     categorySlug: z.string().min(1, t("कैटेगरी चुनें", "Pick a category")),
     topic: z.string().optional(),
-    type: z.enum(["article", "video", "photo"]),
     tags: z.string().optional(),
     isBreaking: z.boolean(),
     isFeatured: z.boolean(),
     scheduledFor: z.string().optional(),
     reviewerIds: z.array(z.string()),
+    coverVideoUrl: z.string().optional(),
+    mediaDestinationId: z.string().optional(),
+    makeReel: z.boolean(),
+    postToYouTube: z.boolean(),
     socialLinks: z.array(
       z.object({
         platform: z.string(),
@@ -150,7 +164,22 @@ const makeEditorSchema = (t: (hi: string, en: string) => string) =>
     metaTitle: z.string().optional(),
     metaDescription: z.string().optional(),
     keywords: z.string().optional(),
-  });
+  })
+    // A story needs a cover, but it is one thing — a photo or a video, not
+    // both. Requiring the photo as well would mean every video story also
+    // needs a still, and the reel's poster frame already is that still.
+    .superRefine((values, context) => {
+      if (!values.coverImageUrl?.trim() && !values.coverVideoUrl?.trim()) {
+        context.addIssue({
+          code: "custom",
+          path: ["coverImageUrl"],
+          message: t(
+            "कवर फोटो या कवर वीडियो, एक ज़रूरी है",
+            "A cover photo or a cover video is required",
+          ),
+        });
+      }
+    });
 
 type EditorValues = z.infer<ReturnType<typeof makeEditorSchema>>;
 
@@ -193,12 +222,15 @@ export function ArticleEditor({
       coverImageUrl: item?.coverImageUrl ?? "",
       categorySlug: item?.categorySlug ?? "desh",
       topic: item?.topic ?? "",
-      type: item?.type ?? "article",
       tags: item?.tags.join(", ") ?? "",
       isBreaking: item?.isBreaking ?? false,
       isFeatured: item?.isFeatured ?? false,
       scheduledFor: item?.scheduledFor?.slice(0, 16) ?? "",
       reviewerIds: item?.reviewers?.map((person) => person.id) ?? [],
+      coverVideoUrl: item?.coverVideoUrl ?? "",
+      mediaDestinationId: item?.mediaDestinationId ?? "",
+      makeReel: item?.makeReel ?? false,
+      postToYouTube: item?.postToYouTube ?? false,
       socialLinks: item?.socialLinks ?? [],
       metaTitle: item?.seo.metaTitle ?? "",
       metaDescription: item?.seo.metaDescription ?? "",
@@ -208,13 +240,42 @@ export function ArticleEditor({
 
   const categorySlug = form.watch("categorySlug");
   const coverImageUrl = form.watch("coverImageUrl");
+  const hasCoverVideo = Boolean(form.watch("coverVideoUrl")?.trim());
+  // Watched, not read once: an upload inside the body must go to the bucket
+  // the reporter has selected right now, not the one selected at mount.
+  const mediaDestinationId = form.watch("mediaDestinationId");
   const title = form.watch("title");
+
+  // Which cover the story leads with. Seeded from what is already saved so
+  // reopening a video story does not land on an empty photo tab.
+  const [coverKind, setCoverKindState] = useState<"photo" | "video">(
+    item?.coverVideoUrl ? "video" : "photo",
+  );
+
+  // Switching clears the other side. Keeping both would quietly leave a
+  // stale photo on a story the writer has decided leads with a clip, and the
+  // card would then disagree with the page.
+  const setCoverKind = (next: "photo" | "video") => {
+    setCoverKindState(next);
+    if (next === "photo") {
+      form.setValue("coverVideoUrl", "", { shouldValidate: true });
+      form.setValue("makeReel", false);
+    } else {
+      form.setValue("coverImageUrl", "", { shouldValidate: true });
+    }
+  };
   // Topics are per category and live in the database, so the list refreshes
   // whenever the category changes.
   const [topicOptions, setTopicOptions] = useState<api.AdminTopic[]>([]);
   // Who can review. Any of them may act on the story; picking one says who is
   // expected to, and that person is the one the email is addressed to.
   const [reviewers, setReviewers] = useState<api.Reviewer[]>([]);
+  // Where this story's media goes. More than one is normal; the reporter
+  // picks, and anything they paste is pulled into that bucket on save.
+  const [destinations, setDestinations] = useState<api.NewsDestination[]>([]);
+  // Null until the settings load; the switch only appears once a channel is
+  // actually connected, so nobody turns on something that cannot happen.
+  const [youtube, setYoutube] = useState<api.YouTubeSettings | null>(null);
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -229,13 +290,29 @@ export function ArticleEditor({
   useEffect(() => {
     let active = true;
     void (async () => {
-      const list = await api.listReviewers().catch(() => []);
-      if (active) setReviewers(list);
+      const [list, storage, social] = await Promise.all([
+        api.listReviewers().catch(() => [] as api.Reviewer[]),
+        api.getStorageSettings().catch(() => null),
+        api.getSocialSettings().catch(() => null),
+      ]);
+      if (!active) return;
+      setReviewers(list);
+      setYoutube(social?.social.youtube ?? null);
+      if (!item && social?.social.youtube.enabled && social.social.youtube.postAutomatically) {
+        form.setValue("postToYouTube", true);
+      }
+      const news = storage?.storage.news ?? [];
+      setDestinations(news);
+      // Pre-select the default for a new story.
+      if (!item?.mediaDestinationId) {
+        const fallback = news.find((entry) => entry.default) ?? news[0];
+        if (fallback) form.setValue("mediaDestinationId", fallback.id);
+      }
     })();
     return () => {
       active = false;
     };
-  }, []);
+  }, [item, form]);
 
   /** Saves the form, then optionally moves the story along the workflow.
    *
@@ -251,10 +328,14 @@ export function ArticleEditor({
             slug: values.slug,
             excerpt: values.excerpt,
             body: values.body,
-            coverImageUrl: values.coverImageUrl,
+            coverImageUrl: values.coverImageUrl ?? "",
             categorySlug: values.categorySlug,
             topic: values.topic === "none" ? "" : (values.topic ?? ""),
-            type: values.type,
+            // Derived rather than chosen. The writer used to pick a format
+            // from a dropdown that could disagree with what they had
+            // actually attached; a story with a cover video is a video
+            // story, and nothing else needed to decide it.
+            type: values.coverVideoUrl?.trim() ? "video" : "article",
             tags: (values.tags ?? "")
               .split(",")
               .map((tag) => tag.trim())
@@ -263,6 +344,10 @@ export function ArticleEditor({
             isFeatured: values.isFeatured,
             scheduledFor: values.scheduledFor || undefined,
             reviewerIds: values.reviewerIds ?? [],
+            coverVideoUrl: values.coverVideoUrl ?? "",
+            mediaDestinationId: values.mediaDestinationId ?? "",
+            makeReel: values.makeReel,
+            postToYouTube: values.postToYouTube,
             socialLinks: (values.socialLinks ?? []).filter((link) => link.url.trim() !== ""),
             seo: {
               metaTitle: values.metaTitle,
@@ -271,12 +356,44 @@ export function ArticleEditor({
             },
           };
 
-          let saved = item ? await api.updateNews(item.id, payload) : await api.createNews(payload);
+          const result = item
+            ? await api.updateNews(item.id, payload)
+            : await api.createNews(payload);
+
+          let saved = result.news;
           if (nextStatus && nextStatus !== saved.status) {
             saved = await api.changeNewsStatus(saved.id, nextStatus);
           }
 
           toast.success(message);
+
+          // Pictures pasted from elsewhere are copied into our own storage on
+          // save. Say so, because the URLs in the story will have changed.
+          const media = result.media;
+          if (media && media.Moved > 0) {
+            toast.success(
+              t(
+                `${media.Moved} फाइलें हमारे स्टोरेज में ले आई गईं`,
+                `${media.Moved} file(s) copied into your storage`,
+              ),
+              {
+                description: t(
+                  "बाहर के लिंक अब हमारे पते पर हैं।",
+                  "Links to other servers now point at your own.",
+                ),
+              },
+            );
+          }
+          if (media && media.Errors.length > 0) {
+            toast.warning(
+              t(
+                `${media.Skipped} फाइलें नहीं आ पाईं`,
+                `${media.Skipped} file(s) could not be copied`,
+              ),
+              { description: media.Errors.slice(0, 3).join(" · "), duration: 12000 },
+            );
+          }
+
           onSaved?.(saved);
           if (!item) {
             router.replace(`/admin/news/${saved.id}`);
@@ -537,6 +654,7 @@ export function ArticleEditor({
                           value={field.value}
                           onChange={field.onChange}
                           disabled={!canEdit}
+                          destination={mediaDestinationId}
                         />
                       </FormControl>
                       <FormMessage />
@@ -549,74 +667,221 @@ export function ArticleEditor({
             <Card id="preview">
               <CardHeader>
                 <CardTitle className="font-display text-base font-bold">
-                  {t("कवर इमेज", "Cover image")}
+                  {t("कवर", "Cover")}
                 </CardTitle>
+                <CardDescription>
+                  {t(
+                    "खबर के ऊपर और कार्ड पर यही दिखेगा — फोटो या वीडियो, दोनों में से एक।",
+                    "This leads the story and the cards — a photo or a video, one of the two.",
+                  )}
+                </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3 pt-0">
-                <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border bg-surface-muted">
-                  {coverImageUrl ? (
-                    <Image
-                      src={coverImageUrl}
-                      alt="कवर"
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 1280px) 100vw, 720px"
-                    />
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-2 text-text-muted">
-                      <IconPhotoUp className="size-8" stroke={1.4} />
-                      <p className="text-sm">
-                        {t(
-                          "कोई कवर इमेज नहीं चुनी गई",
-                          "No cover image selected",
-                        )}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!canEdit}
-                    onClick={() => setPickerOpen(true)}
-                  >
-                    <IconPhotoUp className="size-4" />{" "}
-                    {t("मीडिया लाइब्रेरी से चुनें", "Pick from media library")}
-                  </Button>
-                  {coverImageUrl ? (
-                    <Button
+                <div className="flex w-fit rounded-lg bg-surface-muted p-0.5">
+                  {(["photo", "video"] as const).map((option) => (
+                    <button
+                      key={option}
                       type="button"
-                      variant="ghost"
-                      size="sm"
                       disabled={!canEdit}
-                      onClick={() => form.setValue("coverImageUrl", "")}
+                      onClick={() => setCoverKind(option)}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[12.5px] font-semibold transition-colors",
+                        coverKind === option
+                          ? "bg-surface text-text shadow-sm"
+                          : "text-text-muted hover:text-text",
+                      )}
                     >
-                      <IconX className="size-4" /> {t("हटाएं", "Remove")}
-                    </Button>
-                  ) : null}
+                      {option === "photo" ? (
+                        <>
+                          <IconPhotoUp className="size-3.5" /> {t("फोटो", "Photo")}
+                        </>
+                      ) : (
+                        <>
+                          <IconVideo className="size-3.5" /> {t("वीडियो", "Video")}
+                        </>
+                      )}
+                    </button>
+                  ))}
                 </div>
-                <FormField
-                  control={form.control}
-                  name="coverImageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          disabled={!canEdit}
-                          placeholder={t(
-                            "या इमेज का URL पेस्ट कीजिए",
-                            "Or paste an image URL",
-                          )}
-                          className="text-[13px]"
+
+                {coverKind === "photo" ? (
+                  <>
+                    <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border bg-surface-muted">
+                      {coverImageUrl ? (
+                        <Image
+                          src={coverImageUrl}
+                          alt="कवर"
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 1280px) 100vw, 720px"
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      ) : (
+                        <div className="flex h-full flex-col items-center justify-center gap-2 text-text-muted">
+                          <IconPhotoUp className="size-8" stroke={1.4} />
+                          <p className="text-sm">
+                            {t("कोई कवर फोटो नहीं चुनी गई", "No cover photo selected")}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!canEdit}
+                        onClick={() => setPickerOpen(true)}
+                      >
+                        <IconPhotoUp className="size-4" />{" "}
+                        {t("मीडिया लाइब्रेरी से चुनें", "Pick from media library")}
+                      </Button>
+                      {coverImageUrl ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={!canEdit}
+                          onClick={() => form.setValue("coverImageUrl", "")}
+                        >
+                          <IconX className="size-4" /> {t("हटाएं", "Remove")}
+                        </Button>
+                      ) : null}
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="coverImageUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              disabled={!canEdit}
+                              placeholder={t(
+                                "या इमेज का URL पेस्ट कीजिए",
+                                "Or paste an image URL",
+                              )}
+                              className="text-[13px]"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="coverVideoUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormDescription className="text-[11px]">
+                          {t(
+                            "खबर का एक ही वीडियो — रील भी इसी से बनेगी। कार्ड पर रील का पहला फ्रेम दिखेगा।",
+                            "The story's one video — the reel is cut from it too. Cards use the reel's first frame.",
+                          )}
+                        </FormDescription>
+                        <FormControl>
+                          <MediaUrlField
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            disabled={!canEdit}
+                            destination={mediaDestinationId}
+                            accept="video/*"
+                            placeholder={t("वीडियो का URL", "Video URL")}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display flex items-center gap-1.5 text-base font-bold">
+                  <IconDeviceMobile className="size-4" /> {t("रील", "Reel")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4 pt-0">
+                {!hasCoverVideo ? (
+                  // The reel is cut from the cover video and nothing else, so
+                  // offering the switch without one would be a promise the
+                  // server cannot keep.
+                  <p className="rounded-lg bg-surface-muted px-3 py-2 text-[12px] text-text-muted">
+                    {t(
+                      "रील बनाने के लिए ऊपर कवर में वीडियो लगाइए।",
+                      "Add a cover video above to make a reel.",
+                    )}
+                  </p>
+                ) : null}
+
+                <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+                  <FormField
+                    control={form.control}
+                    name="makeReel"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between gap-2">
+                        <div className="space-y-0.5">
+                          <FormLabel className="flex items-center gap-1.5 text-[13px]">
+                            <IconDeviceMobile className="size-3.5 text-accent" />
+                            {t("रील बनाएं (9:16)", "Make a reel (9:16)")}
+                          </FormLabel>
+                          <FormDescription className="text-[11px]">
+                            {t(
+                              "सेव करने के बाद सर्वर वीडियो को खड़ा काटकर रील बनाएगा — Instagram और Shorts के लिए।",
+                              "After saving, the server cuts the video to vertical for Instagram and Shorts.",
+                            )}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={!canEdit || !hasCoverVideo}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {item?.reel?.status ? <ReelStatus reel={item.reel} /> : null}
+                </div>
+
+                {youtube?.enabled && youtube.hasConnected ? (
+                  <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+                    <FormField
+                      control={form.control}
+                      name="postToYouTube"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between gap-2">
+                          <div className="space-y-0.5">
+                            <FormLabel className="flex items-center gap-1.5 text-[13px]">
+                              <IconBrandYoutube className="size-3.5 text-[#ff0000]" />
+                              {t("YouTube पर डालें", "Post to YouTube")}
+                            </FormLabel>
+                            <FormDescription className="text-[11px]">
+                              {t(
+                                `पब्लिश करते ही ${youtube.channelTitle ?? "चैनल"} पर चला जाएगा। रील बनी हो तो वही जाएगी।`,
+                                `Goes up on ${youtube.channelTitle ?? "the channel"} when you publish. If a reel exists, that is what goes.`,
+                              )}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={!canEdit}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {item?.youtube?.status ? <YouTubeStatus post={item.youtube} /> : null}
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
 
@@ -703,38 +968,6 @@ export function ArticleEditor({
                     )}
                   />
                 ) : null}
-
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("फ़ॉर्मैट", "Format")}</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        disabled={!canEdit}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="article">
-                            {t("आर्टिकल", "Article")}
-                          </SelectItem>
-                          <SelectItem value="video">
-                            {t("वीडियो", "Video")}
-                          </SelectItem>
-                          <SelectItem value="photo">
-                            {t("फोटो स्टोरी", "Photo story")}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
                   control={form.control}
@@ -826,6 +1059,50 @@ export function ArticleEditor({
                     )}
                   />
                 </div>
+
+                {destinations.length > 1 ? (
+                  <FormField
+                    control={form.control}
+                    name="mediaDestinationId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1.5">
+                          <IconCloud className="size-4" /> {t("मीडिया कहाँ रखें", "Store media in")}
+                        </FormLabel>
+                        <Select
+                          value={field.value || destinations[0]?.id}
+                          onValueChange={field.onChange}
+                          disabled={!canEdit}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {destinations.map((destination) => (
+                              <SelectItem key={destination.id} value={destination.id}>
+                                {destination.label}
+                                {destination.default ? (
+                                  <span className="text-[11px] text-text-muted">
+                                    {" "}
+                                    · {t("डिफ़ॉल्ट", "default")}
+                                  </span>
+                                ) : null}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-[11px]">
+                          {t(
+                            "इस खबर की सारी फोटो और वीडियो यहीं जाएँगी — अपलोड की हुई भी, और बाहर से पेस्ट की हुई भी।",
+                            "Every photo and video on this story goes here — uploaded or pasted from elsewhere.",
+                          )}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
 
                 {canPublish ? (
                   <FormField
@@ -1106,6 +1383,11 @@ export function ArticleEditor({
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           kind="news"
+          // The cover is rendered as an image everywhere — in the card grid,
+          // in the share preview. A video picked here would silently show as
+          // nothing, so the Video tab takes those instead.
+          accept="image"
+          destination={mediaDestinationId}
           onSelect={(selected) => {
             form.setValue("coverImageUrl", selected.url, {
               shouldValidate: true,

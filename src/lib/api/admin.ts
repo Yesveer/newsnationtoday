@@ -302,7 +302,7 @@ export async function listAuditLogs(params: ListAuditParams = {}): Promise<Paged
 
 /** The newsroom types live in `@/types/admin`; the API speaks the same shape,
  *  so there is one definition, not two that drift apart. */
-export type { NewsItem, NewsStatus, Person, SocialLink, SocialPlatform } from "@/types/admin";
+export type { NewsItem, NewsStatus, Person, Reel, SocialLink, SocialPlatform } from "@/types/admin";
 
 export interface NewsInput {
   title: string;
@@ -311,6 +311,10 @@ export interface NewsInput {
   body: string;
   coverImageUrl: string;
   coverImageAlt?: string;
+  coverVideoUrl?: string;
+  mediaDestinationId?: string;
+  makeReel?: boolean;
+  postToYouTube?: boolean;
   categorySlug: string;
   topic?: string;
   type: "article" | "video" | "photo";
@@ -420,14 +424,24 @@ export async function getNews(id: string): Promise<NewsItem> {
   return data.news;
 }
 
-export async function createNews(input: NewsInput): Promise<NewsItem> {
-  const data = await apiFetch<{ news: NewsItem }>("/news", { method: "POST", body: input });
-  return data.news;
+/** What the save did with media pasted from elsewhere. */
+export interface MediaReport {
+  Moved: number;
+  Skipped: number;
+  Errors: string[];
 }
 
-export async function updateNews(id: string, input: NewsInput): Promise<NewsItem> {
-  const data = await apiFetch<{ news: NewsItem }>(`/news/${id}`, { method: "PATCH", body: input });
-  return data.news;
+export interface SavedNews {
+  news: NewsItem;
+  media?: MediaReport;
+}
+
+export async function createNews(input: NewsInput): Promise<SavedNews> {
+  return apiFetch<SavedNews>("/news", { method: "POST", body: input });
+}
+
+export async function updateNews(id: string, input: NewsInput): Promise<SavedNews> {
+  return apiFetch<SavedNews>(`/news/${id}`, { method: "PATCH", body: input });
 }
 
 /** The whole editorial workflow: submit, publish, reject, ask for changes. */
@@ -661,6 +675,84 @@ export async function sendTestEmail(settings: SmtpSettings, to: string) {
   });
 }
 
+// ---- social publishing ----------------------------------------------------
+
+export interface YouTubeSettings {
+  enabled: boolean;
+  clientId: string;
+  /** Write-only; the API returns only the flags below. */
+  clientSecret?: string;
+  channelTitle?: string;
+  connectedAt?: string;
+  privacy: "public" | "unlisted" | "private";
+  categoryId: string;
+  tags: string[];
+  madeForKids: boolean;
+  descriptionSuffix: string;
+  postAutomatically: boolean;
+  hasSecret?: boolean;
+  hasConnected?: boolean;
+}
+
+export interface SocialSettings {
+  youtube: YouTubeSettings;
+}
+
+export async function getSocialSettings(): Promise<{
+  social: SocialSettings;
+  redirectUri: string;
+}> {
+  return apiFetch<{ social: SocialSettings; redirectUri: string }>("/settings/social");
+}
+
+export async function saveSocialSettings(settings: SocialSettings): Promise<SocialSettings> {
+  const { youtube } = settings;
+  const data = await apiFetch<{ social: SocialSettings }>("/settings/social", {
+    method: "PUT",
+    // Spelled out: the API rejects unknown fields, and what the page holds
+    // carries read-only extras like hasSecret.
+    body: {
+      youtube: {
+        enabled: youtube.enabled,
+        clientId: youtube.clientId ?? "",
+        clientSecret: youtube.clientSecret ?? "",
+        privacy: youtube.privacy,
+        categoryId: youtube.categoryId ?? "",
+        tags: youtube.tags ?? [],
+        madeForKids: youtube.madeForKids,
+        descriptionSuffix: youtube.descriptionSuffix ?? "",
+        postAutomatically: youtube.postAutomatically,
+      },
+    },
+  });
+  return data.social;
+}
+
+/** Returns the Google consent link to open. */
+export async function connectYouTube(): Promise<string> {
+  const data = await apiFetch<{ url: string }>("/settings/social/youtube/connect", {
+    method: "POST",
+    body: {},
+  });
+  return data.url;
+}
+
+export async function completeYouTube(code: string): Promise<SocialSettings> {
+  const data = await apiFetch<{ social: SocialSettings }>("/settings/social/youtube/complete", {
+    method: "POST",
+    body: { code },
+  });
+  return data.social;
+}
+
+export async function disconnectYouTube(): Promise<SocialSettings> {
+  const data = await apiFetch<{ social: SocialSettings }>("/settings/social/youtube/disconnect", {
+    method: "POST",
+    body: {},
+  });
+  return data.social;
+}
+
 // ---- media library and file storage ---------------------------------------
 
 export type AssetKind = "portal" | "news";
@@ -671,7 +763,8 @@ export interface MediaAsset {
   name: string;
   url: string;
   publicId?: string;
-  provider: "none" | "cloudinary";
+  destinationId?: string;
+  provider: "none" | "cloudinary" | "s3";
   mimeType: string;
   bytes: number;
   width?: number;
@@ -700,11 +793,14 @@ export async function uploadMedia(
   kind: AssetKind = "portal",
   /** "avatar" asks the server for the tighter 1 MB profile-photo limit. */
   purpose?: "avatar",
+  /** Which news destination to store in; empty uses the default. */
+  destination?: string,
 ): Promise<MediaAsset> {
   const form = new FormData();
   form.append("file", file);
   form.append("kind", kind);
   if (purpose) form.append("purpose", purpose);
+  if (destination) form.append("destination", destination);
   const data = await apiUpload<{ asset: MediaAsset }>("/media", form);
   return data.asset;
 }
@@ -714,9 +810,15 @@ export async function deleteMedia(id: string) {
 }
 
 export interface StorageProfile {
-  provider: "none" | "cloudinary";
+  /** "s3" covers every S3-compatible store: R2, B2, Wasabi, Spaces, AWS. */
+  provider: "none" | "cloudinary" | "s3";
   folder: string;
   cloudName: string;
+  bucket?: string;
+  endpoint?: string;
+  region?: string;
+  /** Where readers load files from — on R2 a different host to the endpoint. */
+  publicBaseUrl?: string;
   apiKey: string;
   /** Write-only: the API never returns the stored secret. */
   apiSecret?: string;
@@ -724,9 +826,16 @@ export interface StorageProfile {
   hasSecret?: boolean;
 }
 
+/** One place news media can go. There can be several; the reporter picks. */
+export interface NewsDestination extends StorageProfile {
+  id: string;
+  label: string;
+  default: boolean;
+}
+
 export interface StorageSettings {
   portal: StorageProfile;
-  news: StorageProfile;
+  news: NewsDestination[];
 }
 
 export async function getStorageSettings(): Promise<{ storage: StorageSettings; usage: MediaUsage }> {
@@ -743,6 +852,10 @@ function storageProfileBody(profile: StorageProfile) {
     provider: profile.provider,
     folder: profile.folder ?? "",
     cloudName: profile.cloudName ?? "",
+    bucket: profile.bucket ?? "",
+    endpoint: profile.endpoint ?? "",
+    region: profile.region ?? "",
+    publicBaseUrl: profile.publicBaseUrl ?? "",
     apiKey: profile.apiKey ?? "",
     apiSecret: profile.apiSecret ?? "",
     maxUploadMb: profile.maxUploadMb,
@@ -754,16 +867,25 @@ export async function saveStorageSettings(settings: StorageSettings): Promise<St
     method: "PUT",
     body: {
       portal: storageProfileBody(settings.portal),
-      news: storageProfileBody(settings.news),
+      news: settings.news.map((destination) => ({
+        id: destination.id,
+        label: destination.label,
+        default: destination.default,
+        ...storageProfileBody(destination),
+      })),
     },
   });
   return data.storage;
 }
 
 /** Verifies one profile's credentials without uploading anything. */
-export async function testStorage(kind: AssetKind, profile: StorageProfile) {
+export async function testStorage(
+  kind: AssetKind,
+  profile: StorageProfile,
+  destinationId?: string,
+) {
   return apiFetch<{ message: string }>("/settings/storage/test", {
     method: "POST",
-    body: { kind, ...storageProfileBody(profile) },
+    body: { kind, destinationId: destinationId ?? "", ...storageProfileBody(profile) },
   });
 }

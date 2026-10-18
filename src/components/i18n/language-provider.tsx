@@ -114,12 +114,12 @@ export function LanguageProvider({
   const setLanguage = useCallback(
     (next: string) => {
       setUiLanguage(next);
-      applyTranslateTarget(next, sourceLanguage);
+      applyTranslateTarget(next);
       // The translator re-reads the document on load, so a reload is the
       // cleanest way to swap languages without a half-translated DOM.
       window.location.reload();
     },
-    [setUiLanguage, sourceLanguage],
+    [setUiLanguage],
   );
 
   const t = useCallback(

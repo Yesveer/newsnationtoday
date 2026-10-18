@@ -21,12 +21,17 @@ export function sanitizeStoryHtml(html: string): string {
       "ul", "ol", "li",
       "blockquote", "code", "pre",
       "a", "img", "figure", "figcaption",
+      "video", "source",
       "table", "thead", "tbody", "tr", "th", "td",
       "iframe",
     ],
     allowedAttributes: {
       a: ["href", "name", "target", "rel", "title"],
       img: ["src", "alt", "title", "width", "height", "loading"],
+      // No autoplay: a clip inside a paragraph starts when the reader says
+      // so. The reels feed is the place where video plays by itself.
+      video: ["src", "poster", "controls", "preload", "width", "height", "playsinline"],
+      source: ["src", "type"],
       iframe: ["src", "title", "allow", "allowfullscreen", "width", "height"],
       span: ["style"],
       mark: ["style", "data-color"],
@@ -65,6 +70,12 @@ export function sanitizeStoryHtml(html: string): string {
         attribs: { ...attribs, target: "_blank", rel: "noopener noreferrer" },
       }),
       img: (tagName, attribs) => ({ tagName, attribs: { ...attribs, loading: "lazy" } }),
+      // Controls are forced on rather than trusted from the stored markup,
+      // so a clip can always be paused.
+      video: (tagName, attribs) => ({
+        tagName,
+        attribs: { ...attribs, controls: "controls", preload: "metadata" },
+      }),
     },
   });
 }

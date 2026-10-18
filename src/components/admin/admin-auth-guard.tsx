@@ -24,7 +24,7 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-bg">
         <span className="relative block h-10 w-28 animate-pulse">
-          <Image src="/logo-nnt.png" alt={siteConfig.name} fill className="object-contain" sizes="112px" />
+          <Image src="/logo-nnt.png" alt={siteConfig.name} fill className="object-contain" sizes="112px" priority />
         </span>
         <span className="text-[12.5px] text-text-muted">
           {status === "loading" ? "सेशन जांचा जा रहा है…" : "लॉगिन पेज पर ले जा रहे हैं…"}

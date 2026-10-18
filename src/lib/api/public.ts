@@ -18,6 +18,8 @@ interface ApiArticle {
   body: string;
   coverImageUrl: string;
   coverImageAlt?: string;
+  coverVideoUrl?: string;
+  reel?: { videoUrl: string; posterUrl?: string };
   categorySlug: string;
   topic?: string;
   type: "article" | "video" | "photo";
@@ -124,8 +126,12 @@ export function toArticle(article: ApiArticle, categories: Map<string, Category>
     title: article.title,
     excerpt: article.excerpt,
     bodyHtml: article.body,
-    coverImageUrl: article.coverImageUrl,
+    // A video story has no still of its own; the reel's poster frame is the
+    // thumbnail, so cards and share previews are never blank.
+    coverImageUrl: article.coverImageUrl || article.reel?.posterUrl || "",
     coverImageAlt: article.coverImageAlt ?? article.title,
+    coverVideoUrl: article.coverVideoUrl,
+    reel: article.reel,
     categoryId: category.id,
     authorId: article.authorId ?? "",
     reviewedByName: article.reviewedByName,
@@ -166,6 +172,8 @@ export interface FeedQuery {
   type?: "article" | "video" | "photo";
   featured?: boolean;
   breaking?: boolean;
+  /** Only stories whose vertical cut is finished — the reels feed. */
+  hasReel?: boolean;
   search?: string;
   exclude?: string[];
   limit?: number;
@@ -179,6 +187,7 @@ export async function fetchArticles(query: FeedQuery = {}): Promise<ArticleWithR
   if (query.type) params.set("type", query.type);
   if (query.featured !== undefined) params.set("featured", String(query.featured));
   if (query.breaking !== undefined) params.set("breaking", String(query.breaking));
+  if (query.hasReel) params.set("hasReel", "true");
   if (query.search) params.set("search", query.search);
   if (query.exclude?.length) params.set("exclude", query.exclude.join(","));
   params.set("limit", String(query.limit ?? 50));

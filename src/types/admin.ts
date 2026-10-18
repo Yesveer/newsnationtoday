@@ -91,6 +91,25 @@ export interface StatusEvent {
   note?: string;
 }
 
+/** The 9:16 cut, made on the server after the story is saved. */
+export interface Reel {
+  status?: "" | "queued" | "working" | "ready" | "failed";
+  videoUrl?: string;
+  posterUrl?: string;
+  sourceUrl?: string;
+  error?: string;
+  updatedAt?: string;
+}
+
+/** What happened to a story on YouTube. */
+export interface YouTubePost {
+  status?: "" | "queued" | "working" | "posted" | "failed" | "skipped";
+  videoId?: string;
+  url?: string;
+  error?: string;
+  postedAt?: string;
+}
+
 /** A named account referenced from a story. */
 export interface Person {
   id: string;
@@ -125,6 +144,17 @@ export interface NewsItem {
   excerpt: string;
   body: string;
   coverImageUrl: string;
+  /** The cover, when the story leads with a clip instead of a photo. One
+   *  story has one video, and this is it: the reel is cut from here. */
+  coverVideoUrl?: string;
+  /** Which news bucket this story's media went into. */
+  mediaDestinationId?: string;
+  /** Whether the newsroom wants a 9:16 cut of this story's video. */
+  makeReel?: boolean;
+  reel?: Reel;
+  /** Whether this story should go out on YouTube when published. */
+  postToYouTube?: boolean;
+  youtube?: YouTubePost;
   categorySlug: string;
   topic?: string;
   type: NewsType;

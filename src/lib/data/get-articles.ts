@@ -61,7 +61,11 @@ export async function getHeroArticles(count = 8): Promise<ArticleWithRelations[]
   return [...featured, ...filler].slice(0, count);
 }
 
-/** Video-flagged stories, for the /videos hub and the rail widget. */
-export async function getVideoArticles(): Promise<ArticleWithRelations[]> {
-  return fetchArticles({ type: "video", limit: 50 });
+/** Stories with a finished 9:16 cut — the reels feed at /videos.
+ *
+ *  Keyed on the reel rather than on a "video" label, because the label only
+ *  ever meant someone attached a clip; the feed can only play what has
+ *  actually been cut to vertical. */
+export async function getReelArticles(): Promise<ArticleWithRelations[]> {
+  return fetchArticles({ hasReel: true, limit: 50 });
 }
