@@ -1,4 +1,4 @@
-import { apiFetch, apiUpload, setAccessToken } from "@/lib/api/client";
+import { ApiError, apiFetch, apiUpload, setAccessToken } from "@/lib/api/client";
 import { notifySessionChanged } from "@/lib/api/session-flag";
 import type {
   AdminUser,
@@ -786,6 +786,75 @@ export async function listMedia(params: { kind?: AssetKind; search?: string; typ
   return { items: data.assets ?? [], usage: data.usage ?? {}, total: data.meta.total };
 }
 
+interface SignedUpload {
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  key: string;
+  publicUrl: string;
+  expiresIn: number;
+}
+
+/** Above this, the file goes straight to the bucket instead of through the
+ *  API.
+ *
+ *  The API is hosted behind a 4.5 MB request-body cap that rejects a large
+ *  upload with 413 before any of our code runs, so a video simply cannot
+ *  arrive this way. 4 MB leaves room for the multipart envelope. Small files
+ *  keep the single-request path, which is one round trip instead of three. */
+const DIRECT_UPLOAD_ABOVE = 4 * 1024 * 1024;
+
+/** Sends the file to the bucket itself, using a URL the API signs for this
+ *  one file. Returns the asset row the API writes once the object is there. */
+async function uploadDirect(
+  file: File,
+  kind: AssetKind,
+  destination?: string,
+): Promise<MediaAsset> {
+  const { upload } = await apiFetch<{ upload: SignedUpload }>("/media/presign", {
+    method: "POST",
+    body: JSON.stringify({
+      filename: file.name,
+      contentType: file.type || "application/octet-stream",
+      bytes: file.size,
+      kind,
+      destination: destination ?? "",
+    }),
+  });
+
+  const response = await fetch(upload.url, {
+    method: upload.method,
+    headers: upload.headers,
+    body: file,
+  });
+  if (!response.ok) {
+    // The bucket answers in XML; its <Message> is the useful part and the
+    // rest is noise to anyone reading a toast.
+    const body = await response.text().catch(() => "");
+    const message = body.match(/<Message>([^<]+)<\/Message>/)?.[1];
+    throw new ApiError(
+      response.status,
+      "upload_failed",
+      message ??
+        (response.status === 403
+          ? "The bucket refused the upload — check its CORS settings allow this site."
+          : `The bucket answered ${response.status}`),
+    );
+  }
+
+  const { asset } = await apiFetch<{ asset: MediaAsset }>("/media/confirm", {
+    method: "POST",
+    body: JSON.stringify({
+      key: upload.key,
+      filename: file.name,
+      contentType: file.type || "application/octet-stream",
+      kind,
+      destination: destination ?? "",
+    }),
+  });
+  return asset;
+}
+
 /** Uploads one file. `kind` decides which storage profile it lands in:
  *  "portal" for logos and icons, "news" for story photos and video. */
 export async function uploadMedia(
@@ -796,6 +865,21 @@ export async function uploadMedia(
   /** Which news destination to store in; empty uses the default. */
   destination?: string,
 ): Promise<MediaAsset> {
+  // An avatar is capped at 1 MB and is checked against the bytes themselves,
+  // so it never takes the direct path.
+  if (!purpose && file.size > DIRECT_UPLOAD_ABOVE) {
+    try {
+      return await uploadDirect(file, kind, destination);
+    } catch (error) {
+      // A profile that cannot sign a URL (Cloudinary, or nothing configured)
+      // is not a failure — it just means this file has to go the old way,
+      // and it will succeed if it is small enough to fit through.
+      if (!(error instanceof ApiError && error.code === "direct_upload_unsupported")) {
+        throw error;
+      }
+    }
+  }
+
   const form = new FormData();
   form.append("file", file);
   form.append("kind", kind);
