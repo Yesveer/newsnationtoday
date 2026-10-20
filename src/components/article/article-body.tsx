@@ -1,5 +1,6 @@
 import { sanitizeStoryHtml } from "@/lib/sanitize-story";
 import { toStoryHtml } from "@/lib/story-html";
+import { StoryContent } from "@/components/article/story-content";
 
 /** The story itself.
  *
@@ -10,9 +11,10 @@ import { toStoryHtml } from "@/lib/story-html";
 export function ArticleBody({ bodyHtml }: { bodyHtml: string }) {
   const clean = sanitizeStoryHtml(toStoryHtml(bodyHtml));
 
-  return (
-    // Deliberately translatable: a reader who picks another language wants
-    // the story in it. (The admin editor is the opposite — see its own note.)
-    <div className="news-prose" dangerouslySetInnerHTML={{ __html: clean }} />
-  );
+  // Deliberately translatable: a reader who picks another language wants the
+  // story in it. (The admin editor is the opposite — see its own note.)
+  //
+  // Rendered by a client component so the photos in it can be opened full
+  // screen; the sanitising stays here, on the server.
+  return <StoryContent html={clean} />;
 }

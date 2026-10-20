@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { IconX, IconZoomIn } from "@tabler/icons-react";
+import { useState } from "react";
+import { IconZoomIn } from "@tabler/icons-react";
+import { ImageLightbox } from "@/components/article/image-lightbox";
 import { SafeImage as Image } from "@/components/ui/safe-image";
 
 /** The story's cover photo, shown whole, and openable full screen.
@@ -15,21 +16,6 @@ import { SafeImage as Image } from "@/components/ui/safe-image";
  *  nowhere else to go — the alternative is opening the image URL by hand. */
 export function CoverViewer({ src, alt }: { src: string; alt: string }) {
   const [open, setOpen] = useState(false);
-
-  // Escape closes it, and the page behind must not scroll while it is up.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previous;
-    };
-  }, [open]);
 
   return (
     <>
@@ -57,32 +43,7 @@ export function CoverViewer({ src, alt }: { src: string; alt: string }) {
       </button>
 
       {open ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={alt}
-          onClick={() => setOpen(false)}
-          className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/90 p-4"
-        >
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="बंद कीजिए"
-            className="absolute top-4 right-4 flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-          >
-            <IconX className="size-5" />
-          </button>
-
-          {/* Unoptimised on purpose: this is the full-size view, so the
-              point is the original file rather than a resized copy. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={src}
-            alt={alt}
-            onClick={(event) => event.stopPropagation()}
-            className="max-h-full max-w-full cursor-default object-contain"
-          />
-        </div>
+        <ImageLightbox src={src} alt={alt} onClose={() => setOpen(false)} />
       ) : null}
     </>
   );
