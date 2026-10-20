@@ -183,12 +183,23 @@ const makeEditorSchema = (t: (hi: string, en: string) => string) =>
 
 type EditorValues = z.infer<ReturnType<typeof makeEditorSchema>>;
 
+/** Turns a headline into a URL slug, in whatever script it was written in.
+ *
+ *  `\p{M}` is the part that matters outside English: a matra is a combining
+ *  mark, not a letter, so without it "कश्मीर" came out as "कश-म-र" — the word
+ *  broken at every vowel sign. The backend then refused the result, which is
+ *  why filing in Hindi failed outright. */
 function slugify(value: string): string {
   return value
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
+    .replace(/[^\p{L}\p{N}\p{M}]+/gu, "-")
+    // A mark can only follow a letter; one left at the front after the
+    // headline's first character was punctuation is not a word.
+    .replace(/^[\p{M}-]+|-+$/gu, "")
+    .replace(/-{2,}/g, "-")
+    .slice(0, 60)
+    // Slicing can land mid-word and leave a trailing dash.
+    .replace(/-+$/g, "");
 }
 
 export function ArticleEditor({

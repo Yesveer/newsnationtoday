@@ -9,7 +9,7 @@ import {
   IconVolumeOff,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
-import { ReelShare } from "@/components/reels/reel-share";
+import { ShareButton } from "@/components/share/share-button";
 import type { ArticleWithRelations } from "@/types/article";
 
 /** One reel: the vertical clip, and the story as text beside or under it.
@@ -125,7 +125,8 @@ function Reel({
         {/* Down the right edge, above the caption — where a thumb already
             is on a phone, and where both Reels and Shorts put it. */}
         <div className="absolute right-4 bottom-32 z-10">
-          <ReelShare
+          <ShareButton
+            variant="overlay"
             title={article.title}
             path={`/${article.category.slug}/${article.slug}`}
           />

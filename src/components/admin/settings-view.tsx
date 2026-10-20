@@ -99,11 +99,14 @@ export function SettingsView() {
     }
   };
 
+  // `hint` is a placeholder, never a value. These used to be pre-filled with
+  // the sample handles from the static config, so an untouched form looked
+  // like four configured accounts — and the website linked readers to them.
   const socials = [
-    { key: "twitter", label: "X (Twitter)", icon: IconBrandX, value: siteConfig.social.twitter },
-    { key: "facebook", label: "Facebook", icon: IconBrandFacebook, value: siteConfig.social.facebook },
-    { key: "instagram", label: "Instagram", icon: IconBrandInstagram, value: siteConfig.social.instagram },
-    { key: "youtube", label: "YouTube", icon: IconBrandYoutube, value: siteConfig.social.youtube },
+    { key: "twitter", label: "X (Twitter)", icon: IconBrandX, hint: "https://x.com/yourhandle" },
+    { key: "facebook", label: "Facebook", icon: IconBrandFacebook, hint: "https://facebook.com/yourpage" },
+    { key: "instagram", label: "Instagram", icon: IconBrandInstagram, hint: "https://instagram.com/yourhandle" },
+    { key: "youtube", label: "YouTube", icon: IconBrandYoutube, hint: "https://youtube.com/@yourchannel" },
   ];
 
   return (
@@ -233,7 +236,8 @@ export function SettingsView() {
                   </Label>
                   <Input
                     id={`social-${social.key}`}
-                    value={contact.social?.[social.key] ?? social.value}
+                    value={contact.social?.[social.key] ?? ""}
+                    placeholder={social.hint}
                     onChange={(event) =>
                       patch({
                         contact: {

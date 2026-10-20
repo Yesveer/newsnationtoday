@@ -29,7 +29,6 @@ import {
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { categoriesConfig } from "@/config/categories.config";
-import { siteConfig } from "@/config/site";
 import { useLanguage } from "@/components/i18n/language-provider";
 import { useSiteSettings } from "@/components/site/site-settings-provider";
 import type { Category } from "@/types/category";
@@ -58,12 +57,26 @@ const categoryIcons: Record<string, IconComponent> = {
   rashifal: IconStars,
 };
 
-const socialLinks = [
-  { label: "Twitter", href: siteConfig.social.twitter, icon: IconBrandX, color: "#1DA1F2" },
-  { label: "Facebook", href: siteConfig.social.facebook, icon: IconBrandFacebook, color: "#1877F2" },
-  { label: "Instagram", href: siteConfig.social.instagram, icon: IconBrandInstagram, color: "#E4405F" },
-  { label: "YouTube", href: siteConfig.social.youtube, icon: IconBrandYoutube, color: "#FF0000" },
-];
+/** The newsroom's own accounts, in the order they are shown.
+ *
+ *  Keyed to what the Settings screen saves under `contact.social`. Nothing
+ *  is hard-coded: an account the newsroom has not filled in does not exist,
+ *  so its icon is not drawn. The placeholders that used to live here looked
+ *  exactly like configured accounts and sent readers to someone else's
+ *  handle. */
+const SOCIAL_CHANNELS = [
+  { key: "twitter", label: "X (Twitter)", icon: IconBrandX, color: "#1DA1F2" },
+  { key: "facebook", label: "Facebook", icon: IconBrandFacebook, color: "#1877F2" },
+  { key: "instagram", label: "Instagram", icon: IconBrandInstagram, color: "#E4405F" },
+  { key: "youtube", label: "YouTube", icon: IconBrandYoutube, color: "#FF0000" },
+] as const;
+
+function configuredSocials(social: Record<string, string> | undefined) {
+  return SOCIAL_CHANNELS.map((channel) => ({
+    ...channel,
+    href: social?.[channel.key]?.trim() ?? "",
+  })).filter((channel) => channel.href !== "");
+}
 
 /** Soft tinted tile with the category colour carried by the glyph itself. */
 function IconTile({ color, children }: { color: string; children: React.ReactNode }) {
@@ -160,20 +173,29 @@ export function CategorySidebar({
   categories?: Category[];
 }) {
   const { t } = useLanguage();
-  const { sidebar } = useSiteSettings();
+  const { sidebar, contact } = useSiteSettings();
+  const socialLinks = configuredSocials(contact?.social);
 
   return (
     <aside className={cn("sticky top-14 flex h-fit max-h-[calc(100vh-3.5rem)] flex-col gap-5 overflow-y-auto py-4", className)}>
       <CategoryLinks categories={categories} />
 
-      <div className={cn("border-t border-border pt-4", !sidebar.showSocialLinks && "hidden")}>
+      <div
+        className={cn(
+          "border-t border-border pt-4",
+          // Hidden when the newsroom switched the block off, and equally when
+          // it has no accounts to point at — an empty "Follow us" heading is
+          // worse than no heading.
+          (!sidebar.showSocialLinks || socialLinks.length === 0) && "hidden",
+        )}
+      >
         <p className="px-2.5 pb-2 text-xs font-semibold tracking-wide text-text-muted uppercase">
           {t("sidebar.follow")}
         </p>
         <div className="flex items-center gap-2 px-2.5">
-          {socialLinks.map(({ label, href, icon: Icon, color }) => (
+          {socialLinks.map(({ key, label, href, icon: Icon, color }) => (
             <a
-              key={label}
+              key={key}
               href={href}
               target="_blank"
               rel="noreferrer"

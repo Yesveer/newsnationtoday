@@ -16,21 +16,28 @@ import {
 import { cn } from "@/lib/cn";
 import { siteConfig } from "@/config/site";
 
-/** Share one reel.
+/** Share a story, from the article page or from a reel.
  *
  *  On a phone the first stop is the operating system's own share sheet —
  *  that is the only route to Instagram, and it also reaches whatever else
  *  the reader actually has installed rather than the handful of networks we
  *  guessed at. The explicit list below is the fallback for desktop, where no
- *  such sheet exists. */
-export function ReelShare({
+ *  such sheet exists.
+ *
+ *  `variant` only changes the trigger. Both surfaces open the same sheet, so
+ *  a reader who learns to share from one already knows the other. */
+export function ShareButton({
   title,
   path,
+  variant = "inline",
   className,
 }: {
   title: string;
   /** The story's path, e.g. `/desh/some-slug`. */
   path: string;
+  /** "overlay" is the round glass button that sits on a reel; "inline" is
+   *  the labelled button that sits under a headline. */
+  variant?: "overlay" | "inline";
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -120,20 +127,30 @@ export function ReelShare({
         onClick={share}
         aria-label="शेयर कीजिए"
         className={cn(
-          "flex size-11 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70",
+          "flex items-center justify-center transition-colors",
+          variant === "overlay"
+            ? "size-11 rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
+            : "gap-1.5 rounded-full border border-border px-3 py-1.5 text-[13px] font-medium text-text-muted hover:border-accent hover:text-accent",
           className,
         )}
       >
-        <IconShare3 className="size-5" />
+        <IconShare3 className={variant === "overlay" ? "size-5" : "size-4"} />
+        {variant === "inline" ? <span>शेयर</span> : null}
       </button>
 
       {open ? (
         <div
-          className="absolute inset-0 z-20 flex items-end justify-center bg-black/60"
+          className={cn(
+            "z-50 flex items-end justify-center bg-black/60",
+            // On a reel the sheet belongs to the reel's own frame; anywhere
+            // else there is no such frame to sit inside, so it is pinned to
+            // the viewport.
+            variant === "overlay" ? "absolute inset-0" : "fixed inset-0",
+          )}
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full rounded-t-2xl bg-surface p-4 pb-6 text-text"
+            className="w-full max-w-[460px] rounded-t-2xl bg-surface p-4 pb-6 text-text sm:mb-8 sm:rounded-2xl"
             // The sheet sits on top of the video; a tap inside it must not
             // reach the backdrop and close it.
             onClick={(event) => event.stopPropagation()}

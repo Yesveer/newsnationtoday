@@ -1,10 +1,9 @@
 import { SafeImage as Image } from "@/components/ui/safe-image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { ShareRail } from "@/components/article/share-rail";
+import { ShareButton } from "@/components/share/share-button";
 import { AuthorByline } from "@/components/article/author-byline";
 import { TimeAgo } from "@/components/article/time-ago";
-import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/cn";
 import type { ArticleWithRelations } from "@/types/article";
 
@@ -16,7 +15,6 @@ function getKicker(article: ArticleWithRelations): { text: string; colorClass: s
 
 export function ArticleHeader({ article }: { article: ArticleWithRelations }) {
   const kicker = getKicker(article);
-  const url = `${siteConfig.url}/${article.category.slug}/${article.slug}`;
 
   return (
     <header className="flex flex-col gap-3">
@@ -46,7 +44,10 @@ export function ArticleHeader({ article }: { article: ArticleWithRelations }) {
             · <TimeAgo iso={article.publishedAt} />
           </span>
         </div>
-        <ShareRail url={url} title={article.title} />
+        <ShareButton
+          title={article.title}
+          path={`/${article.category.slug}/${article.slug}`}
+        />
       </div>
 
       {/* A story leads with one thing. When that is a clip it has to be
