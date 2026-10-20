@@ -813,15 +813,13 @@ async function uploadDirect(
 ): Promise<MediaAsset> {
   const { upload } = await apiFetch<{ upload: SignedUpload }>("/media/presign", {
     method: "POST",
-    // `apiFetch` serialises this itself — stringifying here would send a
-    // JSON string containing JSON, which the API rejects as a bad body.
-    body: {
+    body: JSON.stringify({
       filename: file.name,
       contentType: file.type || "application/octet-stream",
       bytes: file.size,
       kind,
       destination: destination ?? "",
-    },
+    }),
   });
 
   const response = await fetch(upload.url, {
@@ -846,13 +844,13 @@ async function uploadDirect(
 
   const { asset } = await apiFetch<{ asset: MediaAsset }>("/media/confirm", {
     method: "POST",
-    body: {
+    body: JSON.stringify({
       key: upload.key,
       filename: file.name,
       contentType: file.type || "application/octet-stream",
       kind,
       destination: destination ?? "",
-    },
+    }),
   });
   return asset;
 }
