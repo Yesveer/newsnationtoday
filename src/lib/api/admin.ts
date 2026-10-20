@@ -805,6 +805,19 @@ export async function uploadMedia(
   return data.asset;
 }
 
+/** Asks the server for a URL slug built from the headline.
+ *
+ *  The server does this, not the browser: it translates the headline to
+ *  English first, so a story filed in Hindi gets a readable URL instead of
+ *  percent-encoded Devanagari, and it adds the unique id the slug carries. */
+export async function suggestSlug(title: string): Promise<string> {
+  const { slug } = await apiFetch<{ slug: string }>("/news/slug", {
+    method: "POST",
+    body: { title },
+  });
+  return slug;
+}
+
 export async function deleteMedia(id: string) {
   return apiFetch<{ message: string }>(`/media/${id}`, { method: "DELETE" });
 }

@@ -23,6 +23,9 @@ import {
   IconUserCheck,
   IconCloud,
   IconDeviceMobile,
+  IconLock,
+  IconLockOpen,
+  IconRefresh,
   IconTrash,
   IconVideo,
   IconX,
@@ -183,22 +186,19 @@ const makeEditorSchema = (t: (hi: string, en: string) => string) =>
 
 type EditorValues = z.infer<ReturnType<typeof makeEditorSchema>>;
 
-/** Turns a headline into a URL slug, in whatever script it was written in.
+/** Tidies a slug the person typed by hand.
  *
- *  `\p{M}` is the part that matters outside English: a matra is a combining
- *  mark, not a letter, so without it "कश्मीर" came out as "कश-म-र" — the word
- *  broken at every vowel sign. The backend then refused the result, which is
- *  why filing in Hindi failed outright. */
-function slugify(value: string): string {
+ *  The slug is normally built by the server, which translates the headline to
+ *  English first. This only runs on the edit field, so that a value typed in
+ *  cannot carry a space, a capital or — the thing that kept showing up in
+ *  URLs — a hyphen hanging off the end. */
+function tidySlug(value: string): string {
   return value
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\p{M}]+/gu, "-")
-    // A mark can only follow a letter; one left at the front after the
-    // headline's first character was punctuation is not a word.
-    .replace(/^[\p{M}-]+|-+$/gu, "")
+    .replace(/^[\p{M}-]+/u, "")
     .replace(/-{2,}/g, "-")
-    .slice(0, 60)
-    // Slicing can land mid-word and leave a trailing dash.
+    .slice(0, 70)
     .replace(/-+$/g, "");
 }
 
@@ -249,6 +249,28 @@ export function ArticleEditor({
     },
   });
 
+  // Asks the server to build the slug. `force` is the regenerate button;
+  // without it an existing slug is left alone, so reopening a story never
+  // silently changes its URL.
+  const buildSlug = async (force = false) => {
+    const headline = form.getValues("title").trim();
+    if (!headline) return;
+    if (!force && form.getValues("slug").trim()) return;
+
+    setSlugBusy(true);
+    try {
+      const slug = await api.suggestSlug(headline);
+      form.setValue("slug", slug, { shouldValidate: true });
+    } catch {
+      // The translator is a convenience. If it or the API is unreachable the
+      // headline still makes a usable slug, just not an English one — better
+      // than leaving the field empty and blocking the save.
+      form.setValue("slug", tidySlug(headline), { shouldValidate: true });
+    } finally {
+      setSlugBusy(false);
+    }
+  };
+
   const categorySlug = form.watch("categorySlug");
   const coverImageUrl = form.watch("coverImageUrl");
   const hasCoverVideo = Boolean(form.watch("coverVideoUrl")?.trim());
@@ -256,6 +278,12 @@ export function ArticleEditor({
   // the reporter has selected right now, not the one selected at mount.
   const mediaDestinationId = form.watch("mediaDestinationId");
   const title = form.watch("title");
+
+  // The slug is derived, not typed. It stays locked until someone explicitly
+  // asks to change it, because it is permanent once published and a reporter
+  // has no reason to invent one.
+  const [slugUnlocked, setSlugUnlocked] = useState(false);
+  const [slugBusy, setSlugBusy] = useState(false);
 
   // Which cover the story leads with. Seeded from what is already saved so
   // reopening a video story does not land on an empty photo tab.
@@ -573,11 +601,9 @@ export function ArticleEditor({
                           )}
                           className="font-display resize-none text-lg leading-snug font-bold"
                           onBlur={() => {
-                            if (!form.getValues("slug") && title) {
-                              form.setValue("slug", slugify(title), {
-                                shouldValidate: true,
-                              });
-                            }
+                            // Only fills an empty slug — a story already
+                            // carrying one keeps the URL it was given.
+                            void buildSlug();
                             field.onBlur();
                           }}
                         />
@@ -606,25 +632,78 @@ export function ArticleEditor({
                           </span>
                           <Input
                             {...field}
+                            readOnly={!slugUnlocked}
                             disabled={!canEdit}
-                            placeholder="url-slug"
-                            className="font-mono text-[13px]"
+                            placeholder={
+                              slugBusy
+                                ? t("बन रहा है…", "Building…")
+                                : t("हेडलाइन से अपने आप बनेगा", "Built from the headline")
+                            }
+                            // Typed by hand only after unlocking, and tidied
+                            // on the way out so no space or trailing hyphen
+                            // reaches the URL.
+                            onBlur={(event) => {
+                              if (slugUnlocked) {
+                                form.setValue("slug", tidySlug(event.target.value), {
+                                  shouldValidate: true,
+                                });
+                              }
+                              field.onBlur();
+                            }}
+                            className={cn(
+                              "font-mono text-[13px]",
+                              !slugUnlocked && "text-text-muted",
+                            )}
                           />
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            disabled={!canEdit}
-                            onClick={() =>
-                              form.setValue("slug", slugify(title), {
-                                shouldValidate: true,
-                              })
-                            }
+                            size="icon-sm"
+                            aria-label={t("दोबारा बनाएं", "Build again")}
+                            title={t("दोबारा बनाएं", "Build again")}
+                            disabled={!canEdit || slugBusy || !title.trim()}
+                            onClick={() => void buildSlug(true)}
                           >
-                            {t("ऑटो", "Auto")}
+                            <IconRefresh
+                              className={cn("size-4", slugBusy && "animate-spin")}
+                            />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={slugUnlocked ? "secondary" : "ghost"}
+                            size="icon-sm"
+                            aria-label={
+                              slugUnlocked
+                                ? t("बदलना बंद करें", "Stop editing")
+                                : t("खुद बदलें", "Edit by hand")
+                            }
+                            title={
+                              slugUnlocked
+                                ? t("बदलना बंद करें", "Stop editing")
+                                : t("खुद बदलें", "Edit by hand")
+                            }
+                            disabled={!canEdit}
+                            onClick={() => setSlugUnlocked((value) => !value)}
+                          >
+                            {slugUnlocked ? (
+                              <IconLockOpen className="size-4" />
+                            ) : (
+                              <IconLock className="size-4" />
+                            )}
                           </Button>
                         </div>
                       </FormControl>
+                      <FormDescription className="text-[11px]">
+                        {slugUnlocked
+                          ? t(
+                              "सावधानी से — पब्लिश होने के बाद यही लिंक लोगों के पास जाता है।",
+                              "Careful — once published this is the link people have.",
+                            )
+                          : t(
+                              "हेडलाइन से अंग्रेज़ी में अपने आप बनता है, आखिर में एक यूनिक id के साथ।",
+                              "Built from the headline in English, with a unique id at the end.",
+                            )}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
