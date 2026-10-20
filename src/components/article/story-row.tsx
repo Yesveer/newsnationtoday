@@ -1,6 +1,6 @@
 "use client";
 
-import { SafeImage as Image } from "@/components/ui/safe-image";
+import { CoverThumb } from "@/components/article/cover-thumb";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Play } from "lucide-react";
@@ -21,10 +21,8 @@ export function StoryRow({ article, className }: { article: ArticleWithRelations
     <motion.article variants={fadeUp} className={cn("group", className)}>
       <Link href={href} className="flex gap-4 rounded-xl p-2.5 transition-colors hover:bg-surface-muted">
         <div className="relative aspect-[4/3] w-28 shrink-0 overflow-hidden rounded-lg bg-surface-muted sm:w-40">
-          <Image
-            src={article.coverImageUrl}
-            alt={article.coverImageAlt}
-            fill
+          <CoverThumb
+            article={article}
             sizes="160px"
             className="object-cover transition-transform duration-500 group-hover:scale-110"
           />

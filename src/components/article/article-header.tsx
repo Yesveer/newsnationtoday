@@ -1,4 +1,4 @@
-import { SafeImage as Image } from "@/components/ui/safe-image";
+import { CoverViewer } from "@/components/article/cover-viewer";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { ShareButton } from "@/components/share/share-button";
@@ -68,9 +68,7 @@ export function ArticleHeader({ article }: { article: ArticleWithRelations }) {
           </video>
         </div>
       ) : article.coverImageUrl ? (
-        <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-surface-muted">
-          <Image src={article.coverImageUrl} alt={article.coverImageAlt} fill priority sizes="800px" className="object-cover" />
-        </div>
+        <CoverViewer src={article.coverImageUrl} alt={article.coverImageAlt} />
       ) : null}
     </header>
   );

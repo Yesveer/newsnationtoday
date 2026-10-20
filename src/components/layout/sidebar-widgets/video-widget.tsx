@@ -1,4 +1,4 @@
-import { SafeImage as Image } from "@/components/ui/safe-image";
+import { CoverThumb } from "@/components/article/cover-thumb";
 import Link from "next/link";
 import { Play } from "lucide-react";
 import { getAllArticles } from "@/lib/data/get-articles";
@@ -16,7 +16,7 @@ export async function VideoWidget() {
         </Link>
       </div>
       <Link href={`/${video.category.slug}/${video.slug}`} className="group relative block aspect-video overflow-hidden rounded-md bg-surface-muted">
-        <Image src={video.coverImageUrl} alt={video.coverImageAlt} fill sizes="300px" className="object-cover" />
+        <CoverThumb article={video} sizes="300px" className="object-cover" />
         <span className="absolute inset-0 flex items-center justify-center bg-black/25">
           <span className="flex size-10 items-center justify-center rounded-full bg-white/90 text-black transition-transform group-hover:scale-110">
             <Play className="size-4 fill-current" />

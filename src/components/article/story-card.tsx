@@ -1,6 +1,6 @@
 "use client";
 
-import { SafeImage as Image } from "@/components/ui/safe-image";
+import { CoverThumb } from "@/components/article/cover-thumb";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Clock, Play } from "lucide-react";
@@ -23,10 +23,8 @@ export function StoryCard({ article, className }: { article: ArticleWithRelation
         className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-[0_18px_40px_-18px_rgb(0_0_0/0.45)]"
       >
         <div className="relative aspect-[16/10] shrink-0 overflow-hidden bg-surface-muted">
-          <Image
-            src={article.coverImageUrl}
-            alt={article.coverImageAlt}
-            fill
+          <CoverThumb
+            article={article}
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover transition-transform duration-[600ms] group-hover:scale-110"
           />

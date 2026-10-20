@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SafeImage as Image } from "@/components/ui/safe-image";
+import { CoverThumb } from "@/components/article/cover-thumb";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -57,10 +57,8 @@ export function HeroSection({ articles }: { articles: ArticleWithRelations[] }) 
                 transition={{ duration: 0.45, ease: "easeOut" }}
                 className="absolute inset-0"
               >
-                <Image
-                  src={active.coverImageUrl}
-                  alt={active.coverImageAlt}
-                  fill
+                <CoverThumb
+                  article={active}
                   priority
                   sizes="(min-width: 1024px) 62vw, 100vw"
                   className={cn("object-cover", !reduceMotion && hero.kenBurns && "animate-kenburns")}
@@ -69,7 +67,7 @@ export function HeroSection({ articles }: { articles: ArticleWithRelations[] }) 
               </motion.div>
             </AnimatePresence>
 
-            <div className="absolute top-3 left-3 flex items-center gap-2 sm:top-4 sm:left-4">
+            <div className="pointer-events-none absolute top-3 left-3 z-20 flex items-center gap-2 sm:top-4 sm:left-4">
               <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold text-accent-foreground">
                 {categoryName}
               </span>
@@ -81,19 +79,28 @@ export function HeroSection({ articles }: { articles: ArticleWithRelations[] }) 
               )}
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6">
-              <Link href={`/${active.category.slug}/${active.slug}`} className="block">
-                <h2 className="line-clamp-3 text-lg leading-snug font-bold text-white sm:text-2xl lg:text-3xl">
-                  {active.title}
-                </h2>
-              </Link>
+            {/* The whole slide is the link, not just the headline. It sits
+                over the image and under the text, and the text lets clicks
+                through — so a reader can tap the picture, the summary or the
+                byline and still land on the story. The dots switch pointer
+                events back on, or changing slide would open one instead. */}
+            <Link
+              href={`/${active.category.slug}/${active.slug}`}
+              aria-label={active.title}
+              className="absolute inset-0 z-10"
+            />
+
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-4 sm:p-6">
+              <h2 className="line-clamp-3 text-lg leading-snug font-bold text-white sm:text-2xl lg:text-3xl">
+                {active.title}
+              </h2>
               <p className="mt-2 hidden text-sm text-white/80 sm:line-clamp-2">{active.excerpt}</p>
               <p className="mt-2 text-xs text-white/70">
                 {active.author.name} · <TimeAgo iso={active.publishedAt} />
               </p>
 
               {slides.length > 1 && (
-                <div className="mt-3 flex items-center gap-1.5">
+                <div className="pointer-events-auto mt-3 flex w-fit items-center gap-1.5">
                   {slides.map((slide, slideIndex) => (
                     <button
                       key={slide.id}
@@ -127,10 +134,8 @@ export function HeroSection({ articles }: { articles: ArticleWithRelations[] }) 
                   className="group flex gap-3 p-3 transition-colors hover:bg-surface-muted"
                 >
                   <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-surface-muted sm:size-20">
-                    <Image
-                      src={story.coverImageUrl}
-                      alt={story.coverImageAlt}
-                      fill
+                    <CoverThumb
+                      article={story}
                       sizes="80px"
                       className="object-cover transition-transform duration-500 group-hover:scale-110"
                     />
